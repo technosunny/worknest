@@ -9,6 +9,9 @@ import {
   getOrgDashboard,
   getOrgSettings,
   updateOrgSettings,
+  listAttendance,
+  attendanceReport,
+  todayAttendance,
 } from '../controllers/orgAdmin.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireOrgAdmin } from '../middleware/role.middleware';
@@ -20,6 +23,9 @@ const router = Router();
 // All org-admin routes require authentication + org_admin role + orgScope
 router.use(authenticate, requireOrgAdmin, requireOrgScope);
 
+router.get('/attendance/today', todayAttendance);
+router.get('/attendance/report', attendanceReport);
+router.get('/attendance', listAttendance);
 router.get('/dashboard', getOrgDashboard);
 router.get('/settings', getOrgSettings);
 router.patch('/settings', updateOrgSettings);

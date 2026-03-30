@@ -652,6 +652,238 @@ export async function getOrgDashboard(
   }
 }
 
+export async function listAttendance(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+    const { page, limit, skip } = parsePagination(
+      req.query.page as string,
+      req.query.limit as string
+    );
+
+    const date = req.query.date as string | undefined;
+    const employeeId = req.query.employee_id as string | undefined;
+    const department = req.query.department as string | undefined;
+    const status = req.query.status as string | undefined;
+
+    const userWhere: Record<string, unknown> = { org_id: orgId };
+    if (employeeId) userWhere.employee_id = { equals: employeeId, mode: 'insensitive' };
+    if (department) userWhere.department = { equals: department, mode: 'insensitive' };
+
+    const where: Record<string, unknown> = { org_id: orgId };
+    if (date) {
+      const d = new Date(date);
+      const dEnd = new Date(date);
+      dEnd.setHours(23, 59, 59, 999);
+      where.date = { gte: d, lte: dEnd };
+    }
+    if (status) where.status = status;
+    if (employeeId || department) {
+      const matchingUsers = await prisma.user.findMany({
+        where: userWhere,
+        select: { id: true },
+      });
+      where.user_id = { in: matchingUsers.map((u) => u.id) };
+    }
+
+    const [records, total] = await Promise.all([
+      prisma.attendance.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: [{ date: 'desc' }, { check_in_time: 'desc' }],
+        include: {
+          user: {
+            select: {
+              first_name: true,
+              last_name: true,
+              email: true,
+              employee_id: true,
+              department: true,
+              designation: true,
+            },
+          },
+        },
+      }),
+      prisma.attendance.count({ where }),
+    ]);
+
+    sendSuccess(res, records, 'Attendance records fetched', 200, buildPagination(page, limit, total));
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function attendanceReport(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+    const month = (req.query.month as string) || new Date().toISOString().slice(0, 7);
+    const department = req.query.department as string | undefined;
+
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = new Date(year, mon - 1, 1);
+    const endDate = new Date(year, mon, 0, 23, 59, 59, 999);
+
+    const userWhere: Record<string, unknown> = {
+      org_id: orgId,
+      role: { not: 'super_admin' },
+      status: 'active',
+    };
+    if (department) userWhere.department = { equals: department, mode: 'insensitive' };
+
+    const employees = await prisma.user.findMany({
+      where: userWhere,
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        employee_id: true,
+        department: true,
+        designation: true,
+      },
+    });
+
+    const employeeIds = employees.map((e) => e.id);
+
+    const records = await prisma.attendance.findMany({
+      where: {
+        org_id: orgId,
+        user_id: { in: employeeIds },
+        date: { gte: startDate, lte: endDate },
+      },
+      select: {
+        user_id: true,
+        status: true,
+        total_hours: true,
+        check_in_time: true,
+      },
+    });
+
+    const LATE_HOUR = 9;
+    const LATE_MINUTE = 30;
+
+    const summaryMap = new Map<string, {
+      total_days_present: number;
+      total_hours: number;
+      late_count: number;
+    }>();
+
+    for (const emp of employees) {
+      summaryMap.set(emp.id, { total_days_present: 0, total_hours: 0, late_count: 0 });
+    }
+
+    for (const r of records) {
+      const s = summaryMap.get(r.user_id);
+      if (!s) continue;
+      if (r.status === 'present' || r.status === 'half_day') {
+        s.total_days_present += r.status === 'present' ? 1 : 0.5;
+        s.total_hours += r.total_hours ? Number(r.total_hours) : 0;
+        if (r.check_in_time) {
+          const h = r.check_in_time.getHours();
+          const m = r.check_in_time.getMinutes();
+          if (h > LATE_HOUR || (h === LATE_HOUR && m > LATE_MINUTE)) {
+            s.late_count += 1;
+          }
+        }
+      }
+    }
+
+    const report = employees.map((emp) => {
+      const s = summaryMap.get(emp.id)!;
+      const avg_hours = s.total_days_present > 0
+        ? Math.round((s.total_hours / s.total_days_present) * 100) / 100
+        : 0;
+      return {
+        user: emp,
+        total_days_present: s.total_days_present,
+        total_hours: Math.round(s.total_hours * 100) / 100,
+        avg_hours,
+        late_count: s.late_count,
+      };
+    });
+
+    sendSuccess(res, { month, report }, 'Attendance report fetched');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function todayAttendance(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const [employees, todayRecords] = await Promise.all([
+      prisma.user.findMany({
+        where: { org_id: orgId, role: { not: 'super_admin' }, status: 'active' },
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          email: true,
+          employee_id: true,
+          department: true,
+          designation: true,
+        },
+      }),
+      prisma.attendance.findMany({
+        where: { org_id: orgId, date: { gte: today, lte: todayEnd } },
+        select: {
+          id: true,
+          user_id: true,
+          check_in_time: true,
+          check_out_time: true,
+          check_in_selfie_url: true,
+          total_hours: true,
+          status: true,
+        },
+      }),
+    ]);
+
+    const recordMap = new Map(todayRecords.map((r) => [r.user_id, r]));
+
+    const result = employees.map((emp) => {
+      const rec = recordMap.get(emp.id);
+      return {
+        user: emp,
+        attendance: rec || null,
+        attendance_status: rec
+          ? rec.check_out_time
+            ? 'checked_out'
+            : 'checked_in'
+          : 'not_checked_in',
+      };
+    });
+
+    const summary = {
+      total: employees.length,
+      checked_in: result.filter((r) => r.attendance_status === 'checked_in').length,
+      checked_out: result.filter((r) => r.attendance_status === 'checked_out').length,
+      not_checked_in: result.filter((r) => r.attendance_status === 'not_checked_in').length,
+    };
+
+    sendSuccess(res, { date: today.toISOString().split('T')[0], summary, records: result }, 'Today\'s attendance fetched');
+  } catch (error) {
+    next(error);
+  }
+}
+
 const updateOrgSettingsSchema = z.object({
   logo_url: z.string().url('Invalid URL').optional().nullable(),
   brand_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable(),
