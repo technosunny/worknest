@@ -1,0 +1,94 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_endpoints.dart';
+import '../models/attendance_model.dart';
+
+class AttendanceRepository {
+  final ApiClient _client = ApiClient();
+
+  Future<AttendanceModel?> getTodayAttendance() async {
+    try {
+      final response = await _client.get(ApiEndpoints.attendanceToday);
+      final data = response.data['data'];
+      if (data == null) return null;
+      return AttendanceModel.fromJson(data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      final msg = e.response?.data?['message'] ?? 'Failed to fetch attendance';
+      throw Exception(msg);
+    }
+  }
+
+  Future<AttendanceModel> checkIn({
+    required double latitude,
+    required double longitude,
+    required File selfie,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'selfie': await MultipartFile.fromFile(
+          selfie.path,
+          filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      });
+      final response = await _client.post(
+        ApiEndpoints.checkIn,
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      final data = response.data['data'] ?? response.data;
+      return AttendanceModel.fromJson(data);
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'] ?? 'Check-in failed. Please try again.';
+      throw Exception(msg);
+    }
+  }
+
+  Future<AttendanceModel> checkOut({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final response = await _client.post(
+        ApiEndpoints.checkOut,
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+      final data = response.data['data'] ?? response.data;
+      return AttendanceModel.fromJson(data);
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'] ?? 'Check-out failed. Please try again.';
+      throw Exception(msg);
+    }
+  }
+
+  Future<List<AttendanceModel>> getAttendanceHistory({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final response = await _client.get(
+        ApiEndpoints.attendanceHistory,
+        queryParameters: {'page': page, 'limit': limit},
+      );
+      final rawData = response.data['data'];
+      List<dynamic> list = [];
+      if (rawData is List) {
+        list = rawData;
+      } else if (rawData is Map && rawData['records'] != null) {
+        list = rawData['records'] as List;
+      } else if (rawData is Map && rawData['attendance'] != null) {
+        list = rawData['attendance'] as List;
+      }
+      return list.map((e) => AttendanceModel.fromJson(e)).toList();
+    } on DioException catch (e) {
+      final msg = e.response?.data?['message'] ?? 'Failed to fetch history';
+      throw Exception(msg);
+    }
+  }
+}
