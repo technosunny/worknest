@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Loader2, UserPlus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ArrowLeft, Loader2, UserPlus, Copy, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -18,6 +19,7 @@ const schema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Enter a valid email'),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
   phone: z.string().optional(),
   designation: z.string().optional(),
   department: z.string().optional(),
@@ -30,6 +32,9 @@ type FormValues = z.infer<typeof schema>;
 export default function NewEmployeePage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [createdEmployee, setCreatedEmployee] = useState<{ email: string; password: string; name: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const {
     register,
@@ -45,9 +50,14 @@ export default function NewEmployeePage() {
       const payload = Object.fromEntries(
         Object.entries(data).filter(([, v]) => v !== '' && v !== undefined)
       );
-      await api.post('/api/org/employees', payload);
+      const res = await api.post('/api/org/employees', payload);
+      const emp = res.data.data;
+      setCreatedEmployee({
+        email: data.email,
+        password: data.password || `Welcome@${new Date().getFullYear()}`,
+        name: `${data.first_name} ${data.last_name}`,
+      });
       toast.success('Employee created successfully');
-      router.push('/org/employees');
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
@@ -108,6 +118,30 @@ export default function NewEmployeePage() {
               )}
             </div>
 
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  {...register('password')}
+                  placeholder="Leave blank for default (Welcome@2026)"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-xs text-red-500">{errors.password.message}</p>
+              )}
+              <p className="text-xs text-gray-400">Min 8 characters. Default: Welcome@2026</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="phone">Phone</Label>
@@ -156,6 +190,57 @@ export default function NewEmployeePage() {
           </form>
         </CardContent>
       </Card>
+      {/* Success Dialog */}
+      <Dialog open={!!createdEmployee} onOpenChange={() => { setCreatedEmployee(null); router.push('/org/employees'); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <DialogTitle>Employee Created!</DialogTitle>
+            </div>
+            <DialogDescription>
+              Share these login credentials with the employee.
+            </DialogDescription>
+          </DialogHeader>
+          {createdEmployee && (
+            <div className="space-y-4 py-2">
+              <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Name</p>
+                  <p className="font-semibold text-gray-900">{createdEmployee.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Email</p>
+                  <p className="font-medium text-gray-900">{createdEmployee.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-0.5">Password</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <code className="flex-1 bg-white border rounded px-3 py-1.5 text-sm font-mono">
+                      {createdEmployee.password}
+                    </code>
+                    <Button size="sm" variant="outline" onClick={() => {
+                      navigator.clipboard.writeText(createdEmployee.password);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}>
+                      {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setCreatedEmployee(null); router.push('/org/employees/new'); }}>
+                  Add Another
+                </Button>
+                <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => { setCreatedEmployee(null); router.push('/org/employees'); }}>
+                  View Employees
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
