@@ -5,12 +5,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -21,6 +23,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { branding, isLoaded } = useBranding();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -41,18 +44,43 @@ export default function LoginPage() {
     }
   };
 
+  const brandColour = branding?.brand_colour || '#2563eb';
+  const orgName = branding?.name || 'WorkNest HR';
+  const hasOrgBranding = isLoaded && branding && branding.slug !== '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600 shadow-lg">
-            <Briefcase className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">WorkNest HR</h1>
-            <p className="text-blue-300 text-sm">Admin Portal</p>
-          </div>
+          {hasOrgBranding && branding?.logo_url ? (
+            <div className="flex items-center gap-3">
+              <Image
+                src={branding.logo_url}
+                alt={`${orgName} logo`}
+                width={48}
+                height={48}
+                className="rounded-xl object-contain bg-white p-1"
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-white">{orgName}</h1>
+                <p className="text-blue-300 text-sm">Admin Portal</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div
+                className="flex items-center justify-center w-12 h-12 rounded-xl shadow-lg"
+                style={{ backgroundColor: brandColour }}
+              >
+                <Briefcase className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white">{orgName}</h1>
+                <p className="text-blue-300 text-sm">Admin Portal</p>
+              </div>
+            </>
+          )}
         </div>
 
         <Card className="border-0 shadow-2xl">
@@ -95,7 +123,12 @@ export default function LoginPage() {
                 {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
               </div>
 
-              <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full text-white"
+                style={{ backgroundColor: brandColour }}
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -110,7 +143,7 @@ export default function LoginPage() {
         </Card>
 
         <p className="text-center text-sm text-slate-400 mt-6">
-          WorkNest HR &copy; {new Date().getFullYear()}
+          {orgName} &copy; {new Date().getFullYear()}
         </p>
       </div>
     </div>

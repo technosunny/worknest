@@ -7,6 +7,8 @@ import {
   deactivateEmployee,
   bulkImportEmployees,
   getOrgDashboard,
+  getOrgSettings,
+  updateOrgSettings,
 } from '../controllers/orgAdmin.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireOrgAdmin } from '../middleware/role.middleware';
@@ -19,6 +21,8 @@ const router = Router();
 router.use(authenticate, requireOrgAdmin, requireOrgScope);
 
 router.get('/dashboard', getOrgDashboard);
+router.get('/settings', getOrgSettings);
+router.patch('/settings', updateOrgSettings);
 router.get('/employees', listEmployees);
 router.post('/employees', createEmployee);
 router.post('/employees/bulk-import', uploadCsv, bulkImportEmployees);

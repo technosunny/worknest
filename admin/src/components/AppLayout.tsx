@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/contexts/BrandingContext';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -13,8 +14,10 @@ import {
   Menu,
   Briefcase,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
 
 const superAdminLinks = [
   { href: '/super-admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,24 +27,44 @@ const superAdminLinks = [
 const orgAdminLinks = [
   { href: '/org/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/org/employees', label: 'Employees', icon: Users },
+  { href: '/org/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
+  const { branding } = useBranding();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const links = user?.role === 'super_admin' ? superAdminLinks : orgAdminLinks;
 
+  const logoUrl = branding?.logo_url;
+  const orgName = branding?.name || 'WorkNest HR';
+  const brandColour = branding?.brand_colour || '#2563eb';
+  const isOrgAdmin = user?.role === 'org_admin';
+
   const Sidebar = () => (
     <div className="flex flex-col h-full bg-slate-900 text-white w-64">
       {/* Logo */}
       <div className="flex items-center gap-2 px-6 py-5 border-b border-slate-700">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600">
-          <Briefcase className="w-4 h-4 text-white" />
-        </div>
+        {isOrgAdmin && logoUrl ? (
+          <Image
+            src={logoUrl}
+            alt={`${orgName} logo`}
+            width={32}
+            height={32}
+            className="rounded-lg object-contain bg-white p-0.5 flex-shrink-0"
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center w-8 h-8 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: brandColour }}
+          >
+            <Briefcase className="w-4 h-4 text-white" />
+          </div>
+        )}
         <div>
-          <h1 className="font-bold text-base leading-tight">WorkNest HR</h1>
+          <h1 className="font-bold text-base leading-tight">{isOrgAdmin ? orgName : 'WorkNest HR'}</h1>
           <p className="text-xs text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</p>
         </div>
       </div>
@@ -62,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
               )}
+              style={active && isOrgAdmin && branding?.brand_colour ? { backgroundColor: brandColour } : undefined}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
               {link.label}
@@ -120,8 +144,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-blue-600" />
-            <span className="font-bold text-sm">WorkNest HR</span>
+            {isOrgAdmin && logoUrl ? (
+              <Image
+                src={logoUrl}
+                alt={`${orgName} logo`}
+                width={20}
+                height={20}
+                className="rounded object-contain"
+              />
+            ) : (
+              <Briefcase className="w-5 h-5 text-blue-600" />
+            )}
+            <span className="font-bold text-sm">{isOrgAdmin ? orgName : 'WorkNest HR'}</span>
           </div>
         </header>
 

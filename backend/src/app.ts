@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes';
 import superAdminRoutes from './routes/superAdmin.routes';
 import orgAdminRoutes from './routes/orgAdmin.routes';
 import employeeRoutes from './routes/employee.routes';
+import publicRoutes from './routes/public.routes';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
 
 const app: Application = express();
@@ -43,6 +44,7 @@ app.get('/health', (_req, res) => {
 });
 
 // API Routes
+app.use('/api/public', publicRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/org', orgAdminRoutes);

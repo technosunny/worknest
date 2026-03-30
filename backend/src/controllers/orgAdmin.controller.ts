@@ -651,3 +651,79 @@ export async function getOrgDashboard(
     next(error);
   }
 }
+
+const updateOrgSettingsSchema = z.object({
+  logo_url: z.string().url('Invalid URL').optional().nullable(),
+  brand_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable(),
+});
+
+export async function getOrgSettings(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+
+    const org = await prisma.organisation.findUnique({
+      where: { id: orgId },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logo_url: true,
+        brand_colour: true,
+        timezone: true,
+        plan: true,
+      },
+    });
+
+    if (!org) {
+      sendNotFound(res, 'Organisation not found');
+      return;
+    }
+
+    sendSuccess(res, org, 'Organisation settings retrieved');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateOrgSettings(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+
+    const parsed = updateOrgSettingsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendBadRequest(res, parsed.error.errors[0].message);
+      return;
+    }
+
+    const { logo_url, brand_colour } = parsed.data;
+
+    const updated = await prisma.organisation.update({
+      where: { id: orgId },
+      data: {
+        ...(logo_url !== undefined && { logo_url }),
+        ...(brand_colour !== undefined && { brand_colour }),
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logo_url: true,
+        brand_colour: true,
+        timezone: true,
+        plan: true,
+      },
+    });
+
+    sendSuccess(res, updated, 'Organisation settings updated');
+  } catch (error) {
+    next(error);
+  }
+}
