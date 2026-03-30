@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import {
   getProfile,
+  updateProfile,
+  changePassword,
   checkIn,
   checkOut,
   getAttendanceHistory,
@@ -17,6 +19,8 @@ const router = Router();
 router.use(authenticate, requireEmployee, requireOrgScope);
 
 router.get('/profile', getProfile);
+router.patch('/profile', updateProfile);
+router.post('/change-password', changePassword);
 router.post('/check-in', uploadSelfie, checkIn);
 router.post('/check-out', checkOut);
 router.get('/attendance', getAttendanceHistory);

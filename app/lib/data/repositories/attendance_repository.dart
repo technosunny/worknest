@@ -27,8 +27,8 @@ class AttendanceRepository {
   }) async {
     try {
       final formData = FormData.fromMap({
-        'latitude': latitude.toString(),
-        'longitude': longitude.toString(),
+        'lat': latitude.toString(),
+        'lng': longitude.toString(),
         'selfie': await MultipartFile.fromFile(
           selfie.path,
           filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg',
@@ -55,8 +55,8 @@ class AttendanceRepository {
       final response = await _client.post(
         ApiEndpoints.checkOut,
         data: {
-          'latitude': latitude,
-          'longitude': longitude,
+          'lat': latitude,
+          'lng': longitude,
         },
       );
       final data = response.data['data'] ?? response.data;

@@ -92,6 +92,81 @@ export async function getProfile(
   }
 }
 
+const updateProfileSchema = z.object({
+  first_name: z.string().min(1).optional(),
+  last_name: z.string().min(1).optional(),
+  phone: z.string().optional().nullable(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
+
+export async function updateProfile(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const data = updateProfileSchema.parse(req.body);
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        first_name: true,
+        last_name: true,
+        designation: true,
+        department: true,
+        avatar_url: true,
+      },
+    });
+
+    sendSuccess(res, updated, 'Profile updated successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changePassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      sendNotFound(res, 'User not found');
+      return;
+    }
+
+    const bcrypt = await import('bcryptjs');
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      sendBadRequest(res, 'Current password is incorrect');
+      return;
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password_hash: newHash },
+    });
+
+    sendSuccess(res, null, 'Password changed successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function checkIn(
   req: Request,
   res: Response,
