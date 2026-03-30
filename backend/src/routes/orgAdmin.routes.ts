@@ -1,0 +1,29 @@
+import { Router } from 'express';
+import {
+  listEmployees,
+  createEmployee,
+  getEmployee,
+  updateEmployee,
+  deactivateEmployee,
+  bulkImportEmployees,
+  getOrgDashboard,
+} from '../controllers/orgAdmin.controller';
+import { authenticate } from '../middleware/auth.middleware';
+import { requireOrgAdmin } from '../middleware/role.middleware';
+import { requireOrgScope } from '../middleware/orgScope.middleware';
+import { uploadCsv } from '../middleware/upload.middleware';
+
+const router = Router();
+
+// All org-admin routes require authentication + org_admin role + orgScope
+router.use(authenticate, requireOrgAdmin, requireOrgScope);
+
+router.get('/dashboard', getOrgDashboard);
+router.get('/employees', listEmployees);
+router.post('/employees', createEmployee);
+router.post('/employees/bulk-import', uploadCsv, bulkImportEmployees);
+router.get('/employees/:id', getEmployee);
+router.patch('/employees/:id', updateEmployee);
+router.delete('/employees/:id', deactivateEmployee);
+
+export default router;
