@@ -16,7 +16,8 @@ build/
 .env.production.local
 
 # Prisma
-prisma/migrations/
+# Keep migrations in git for deployment
+# prisma/migrations/
 
 # Uploads
 uploads/
