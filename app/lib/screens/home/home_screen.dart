@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../bloc/attendance/attendance_bloc.dart';
 import '../../bloc/attendance/attendance_event.dart';
 import '../../bloc/attendance/attendance_state.dart';
@@ -29,6 +30,19 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     context.read<AttendanceBloc>().add(AttendanceLoadToday());
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    final cameraStatus = await Permission.camera.status;
+    final locationStatus = await Permission.location.status;
+
+    if (!cameraStatus.isGranted) {
+      await Permission.camera.request();
+    }
+    if (!locationStatus.isGranted) {
+      await Permission.location.request();
+    }
   }
 
   void _startTimer(DateTime checkInTime) {
@@ -104,23 +118,26 @@ class _HomeScreenState extends State<HomeScreen> {
             onRefresh: () async {
               context.read<AttendanceBloc>().add(AttendanceLoadToday());
             },
-            child: CustomScrollView(
-              slivers: [
-                _buildAppBar(context),
-                SliverPadding(
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SafeArea(
+                child: Padding(
                   padding: const EdgeInsets.all(20),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(context),
+                      const SizedBox(height: 20),
                       _buildStatusCard(today, isLoading),
                       const SizedBox(height: 32),
                       _buildCheckInButton(today, isLoading),
                       const SizedBox(height: 32),
                       _buildStatsRow(today),
                       const SizedBox(height: 100),
-                    ]),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           );
         },
@@ -128,69 +145,59 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 0,
-      floating: true,
-      pinned: false,
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          final name = state is AuthAuthenticated ? state.user.name : '';
-          final parts = name.split(' ');
-          final greeting = _greeting();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                greeting,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.w400,
+  Widget _buildHeader(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final name = state is AuthAuthenticated ? state.user.name : '';
+        final parts = name.split(' ');
+        final greeting = _greeting();
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
-              ),
-              Text(
-                parts.isNotEmpty ? parts.first : name,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+                Text(
+                  parts.isNotEmpty ? parts.first : name,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
-      actions: [
-        BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            if (state is! AuthAuthenticated) return const SizedBox();
-            final user = state.user;
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: CircleAvatar(
-                radius: 18,
+              ],
+            ),
+            if (state is AuthAuthenticated)
+              CircleAvatar(
+                radius: 22,
                 backgroundColor: AppTheme.primaryLight,
-                backgroundImage: user.avatar != null && user.avatar!.isNotEmpty
-                    ? NetworkImage(user.avatar!)
-                    : null,
-                child: (user.avatar == null || user.avatar!.isEmpty)
+                backgroundImage:
+                    state.user.avatar != null && state.user.avatar!.isNotEmpty
+                        ? NetworkImage(state.user.avatar!)
+                        : null,
+                child: (state.user.avatar == null || state.user.avatar!.isEmpty)
                     ? Text(
-                        user.initials,
+                        state.user.initials,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.primary,
                         ),
                       )
                     : null,
               ),
-            );
-          },
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -338,14 +345,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCheckInButton(AttendanceModel? today, bool isLoading) {
-    final isCheckedIn = today?.isCheckedIn == true && !today!.isCheckedOut;
+    final isCheckedIn = today != null && today.isCheckedIn && !today.isCheckedOut;
     return Center(
       child: CheckInButton(
         isCheckedIn: isCheckedIn,
         isLoading: isLoading,
         onPressed: () {
-          if (isCheckedIn && today != null) {
-            _onCheckOutPressed(today);
+          final t = today;
+          if (isCheckedIn && t != null) {
+            _onCheckOutPressed(t);
           } else {
             _onCheckInPressed();
           }

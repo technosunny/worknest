@@ -1,4 +1,4 @@
-enum AttendanceStatus { present, halfDay, absent, late, unknown }
+enum AttendanceStatus { present, halfDay, absent, late, weekend, holiday, unknown }
 
 class AttendanceModel {
   final String id;
@@ -37,8 +37,15 @@ class AttendanceModel {
     DateTime? checkIn;
     DateTime? checkOut;
 
-    final rawCheckIn = json['checkIn'] ?? json['check_in'] ?? json['checkInTime'];
-    final rawCheckOut = json['checkOut'] ?? json['check_out'] ?? json['checkOutTime'];
+    // Backend returns check_in_time / check_out_time (snake_case)
+    final rawCheckIn = json['check_in_time'] ??
+        json['checkIn'] ??
+        json['check_in'] ??
+        json['checkInTime'];
+    final rawCheckOut = json['check_out_time'] ??
+        json['checkOut'] ??
+        json['check_out'] ??
+        json['checkOutTime'];
 
     if (rawCheckIn != null) {
       checkIn = DateTime.tryParse(rawCheckIn.toString())?.toLocal();
@@ -47,14 +54,18 @@ class AttendanceModel {
       checkOut = DateTime.tryParse(rawCheckOut.toString())?.toLocal();
     }
 
-    final rawDate = json['date'] ?? json['createdAt'];
+    final rawDate = json['date'] ?? json['created_at'] ?? json['createdAt'];
     DateTime date = DateTime.now();
     if (rawDate != null) {
       date = DateTime.tryParse(rawDate.toString())?.toLocal() ?? DateTime.now();
     }
 
     double? hours;
-    final rawHours = json['hoursWorked'] ?? json['hours_worked'] ?? json['totalHours'];
+    // Backend returns total_hours
+    final rawHours = json['total_hours'] ??
+        json['hoursWorked'] ??
+        json['hours_worked'] ??
+        json['totalHours'];
     if (rawHours != null) {
       hours = double.tryParse(rawHours.toString());
     }
@@ -76,6 +87,32 @@ class AttendanceModel {
       case 'late':
         status = AttendanceStatus.late;
         break;
+      case 'weekend':
+        status = AttendanceStatus.weekend;
+        break;
+      case 'holiday':
+        status = AttendanceStatus.holiday;
+        break;
+    }
+
+    // Location: lat/lng fields from backend
+    String? checkInLocation;
+    final checkInLat = json['check_in_lat'];
+    final checkInLng = json['check_in_lng'];
+    if (checkInLat != null && checkInLng != null) {
+      checkInLocation = '$checkInLat,$checkInLng';
+    } else {
+      checkInLocation =
+          json['checkInLocation']?.toString() ?? json['location']?.toString();
+    }
+
+    String? checkOutLocation;
+    final checkOutLat = json['check_out_lat'];
+    final checkOutLng = json['check_out_lng'];
+    if (checkOutLat != null && checkOutLng != null) {
+      checkOutLocation = '$checkOutLat,$checkOutLng';
+    } else {
+      checkOutLocation = json['checkOutLocation']?.toString();
     }
 
     return AttendanceModel(
@@ -85,9 +122,13 @@ class AttendanceModel {
       checkOutTime: checkOut,
       hoursWorked: hours,
       status: status,
-      checkInLocation: json['checkInLocation']?.toString() ?? json['location']?.toString(),
-      checkOutLocation: json['checkOutLocation']?.toString(),
-      selfieUrl: json['selfie'] ?? json['selfieUrl'] ?? json['photo'],
+      checkInLocation: checkInLocation,
+      checkOutLocation: checkOutLocation,
+      // Backend returns check_in_selfie_url
+      selfieUrl: json['check_in_selfie_url'] ??
+          json['selfie'] ??
+          json['selfieUrl'] ??
+          json['photo'],
     );
   }
 }

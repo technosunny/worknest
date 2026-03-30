@@ -77,6 +77,10 @@ class ApiClient {
     return _dio.post(path, data: data, options: options);
   }
 
+  Future<Response> patch(String path, {dynamic data, Options? options}) {
+    return _dio.patch(path, data: data, options: options);
+  }
+
   Future<void> saveTokens(String accessToken, String refreshToken) async {
     await _storage.write(key: AppConstants.tokenKey, value: accessToken);
     await _storage.write(key: AppConstants.refreshTokenKey, value: refreshToken);

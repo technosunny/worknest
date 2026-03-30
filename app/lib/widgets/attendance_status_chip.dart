@@ -37,6 +37,10 @@ class AttendanceStatusChip extends StatelessWidget {
         return ('Absent', AppTheme.errorLight, AppTheme.error);
       case AttendanceStatus.late:
         return ('Late', const Color(0xFFFFF7ED), const Color(0xFFEA580C));
+      case AttendanceStatus.weekend:
+        return ('Weekend', AppTheme.border, AppTheme.textSecondary);
+      case AttendanceStatus.holiday:
+        return ('Holiday', AppTheme.primaryLight, AppTheme.primary);
       case AttendanceStatus.unknown:
         return ('—', AppTheme.border, AppTheme.textLight);
     }

@@ -6,5 +6,7 @@ class ApiEndpoints {
   static const String checkOut = '/api/employee/check-out';
   static const String attendanceToday = '/api/employee/attendance/today';
   static const String attendanceHistory = '/api/employee/attendance';
+  static const String updateProfile = '/api/employee/profile';
+  static const String changePassword = '/api/employee/change-password';
   static String branding(String slug) => '/api/public/branding/$slug';
 }

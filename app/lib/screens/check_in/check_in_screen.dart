@@ -3,6 +3,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../bloc/attendance/attendance_bloc.dart';
 import '../../bloc/attendance/attendance_event.dart';
@@ -19,13 +20,13 @@ class CheckInScreen extends StatefulWidget {
 class _CheckInScreenState extends State<CheckInScreen> {
   CameraController? _cameraController;
   bool _cameraInitialized = false;
-  bool _isFrontCamera = true;
   File? _capturedImage;
   Position? _position;
   bool _isGettingLocation = false;
   String? _locationError;
   String? _cameraError;
-  List<CameraDescription> _cameras = [];
+  bool _cameraDenied = false;
+  bool _locationDenied = false;
 
   @override
   void initState() {
@@ -35,20 +36,32 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   Future<void> _initCamera() async {
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      setState(() => _cameraError = 'Camera permission denied');
+    // Check existing permission first — don't re-request if already granted/denied
+    final status = await Permission.camera.status;
+    if (status.isPermanentlyDenied) {
+      setState(() {
+        _cameraDenied = true;
+        _cameraError = 'Camera permission permanently denied. Please enable it in Settings.';
+      });
       return;
     }
+    if (status.isDenied) {
+      setState(() {
+        _cameraDenied = true;
+        _cameraError = 'Camera permission denied. Enable it in Settings to take a selfie.';
+      });
+      return;
+    }
+
     try {
-      _cameras = await availableCameras();
-      if (_cameras.isEmpty) {
-        setState(() => _cameraError = 'No cameras found');
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        setState(() => _cameraError = 'No cameras available on this device');
         return;
       }
-      final frontCamera = _cameras.firstWhere(
+      final frontCamera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
-        orElse: () => _cameras.first,
+        orElse: () => cameras.first,
       );
       await _startCamera(frontCamera);
     } catch (e) {
@@ -65,9 +78,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
     );
     try {
       await _cameraController!.initialize();
-      if (mounted) setState(() => _cameraInitialized = true);
+      if (mounted) {
+        setState(() {
+          _cameraInitialized = true;
+          _cameraError = null;
+        });
+      }
     } catch (e) {
-      setState(() => _cameraError = 'Failed to initialize camera');
+      if (mounted) {
+        setState(() => _cameraError = 'Failed to start camera: $e');
+      }
     }
   }
 
@@ -79,21 +99,36 @@ class _CheckInScreenState extends State<CheckInScreen> {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        setState(() => _locationError = 'Location services are disabled');
+        setState(() {
+          _locationError = 'Location services are disabled. Please enable GPS.';
+          _isGettingLocation = false;
+        });
         return;
       }
+
       var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _locationDenied = true;
+          _locationError = 'Location permission permanently denied. Please enable in Settings.';
+          _isGettingLocation = false;
+        });
+        return;
+      }
       if (permission == LocationPermission.denied) {
+        // Only request if not already asked on home screen
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() => _locationError = 'Location permission denied');
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          setState(() {
+            _locationDenied = permission == LocationPermission.deniedForever;
+            _locationError = 'Location permission denied';
+            _isGettingLocation = false;
+          });
           return;
         }
       }
-      if (permission == LocationPermission.deniedForever) {
-        setState(() => _locationError = 'Location permission permanently denied');
-        return;
-      }
+
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
@@ -101,7 +136,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     } catch (e) {
       setState(() => _locationError = 'Failed to get location: $e');
     } finally {
-      setState(() => _isGettingLocation = false);
+      if (mounted) setState(() => _isGettingLocation = false);
     }
   }
 
@@ -111,9 +146,22 @@ class _CheckInScreenState extends State<CheckInScreen> {
       final xFile = await _cameraController!.takePicture();
       setState(() => _capturedImage = File(xFile.path));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to take photo: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to take photo: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final picker = ImagePicker();
+    final xFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+    if (xFile != null) {
+      setState(() => _capturedImage = File(xFile.path));
     }
   }
 
@@ -203,38 +251,72 @@ class _CheckInScreenState extends State<CheckInScreen> {
       );
     }
 
-    if (_cameraError != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.no_photography, color: Colors.white54, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              _cameraError!,
-              style: const TextStyle(color: Colors.white70),
-              textAlign: TextAlign.center,
+    if (_cameraError != null || _cameraDenied) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.no_photography_outlined, color: Colors.white54, size: 56),
+                const SizedBox(height: 16),
+                Text(
+                  _cameraError ?? 'Camera unavailable',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                if (_cameraDenied) ...[
+                  OutlinedButton.icon(
+                    onPressed: openAppSettings,
+                    icon: const Icon(Icons.settings_outlined, color: Colors.white70),
+                    label: const Text('Open Settings', style: TextStyle(color: Colors.white70)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.white38),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                OutlinedButton.icon(
+                  onPressed: _pickFromGallery,
+                  icon: const Icon(Icons.photo_library_outlined, color: Colors.white70),
+                  label: const Text('Pick from Gallery', style: TextStyle(color: Colors.white70)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white38),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: _initCamera,
-              child: const Text('Retry', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+          ),
         ),
       );
     }
 
     if (!_cameraInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return Container(
+        color: Colors.black,
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
       );
     }
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        ClipRect(child: CameraPreview(_cameraController!)),
+        // Explicit black background so there's never a grey flash
+        Container(color: Colors.black),
+        // Fill the available space with the camera preview
+        FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: _cameraController!.value.previewSize?.height ?? 1,
+            height: _cameraController!.value.previewSize?.width ?? 1,
+            child: CameraPreview(_cameraController!),
+          ),
+        ),
         // Face guide overlay
         Center(
           child: Container(
@@ -279,7 +361,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 _buildLocationStatus(),
                 const SizedBox(height: 16),
                 if (_capturedImage == null)
-                  _buildCaptureButton()
+                  _buildCaptureButtons()
                 else
                   _buildSubmitButton(isSubmitting),
               ],
@@ -348,37 +430,57 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ],
           ),
         ),
-        if (_locationError != null)
+        if (_locationError != null && !_locationDenied)
           TextButton(
             onPressed: _getLocation,
             child: const Text('Retry'),
+          ),
+        if (_locationDenied)
+          TextButton(
+            onPressed: openAppSettings,
+            child: const Text('Settings'),
           ),
       ],
     );
   }
 
-  Widget _buildCaptureButton() {
-    return GestureDetector(
-      onTap: _cameraInitialized ? _takeSelfie : null,
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppTheme.primary, width: 3),
-        ),
-        child: Center(
-          child: Container(
-            width: 58,
-            height: 58,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppTheme.primary,
+  Widget _buildCaptureButtons() {
+    final canCapture = _cameraInitialized && _cameraError == null;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (canCapture)
+          GestureDetector(
+            onTap: _takeSelfie,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.primary, width: 3),
+              ),
+              child: Center(
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.primary,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 28),
+                ),
+              ),
             ),
-            child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 28),
           ),
+        if (canCapture) const SizedBox(width: 20),
+        IconButton(
+          onPressed: _pickFromGallery,
+          icon: const Icon(Icons.photo_library_outlined),
+          tooltip: 'Pick from gallery',
+          color: AppTheme.textSecondary,
+          iconSize: 28,
         ),
-      ),
+      ],
     );
   }
 
