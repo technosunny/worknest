@@ -45,7 +45,7 @@ export default function NewOrganisationPage() {
     setIsLoading(true);
     try {
       const res = await api.post('/api/super-admin/organisations', data);
-      setCreated(res.data);
+      setCreated(res.data.data);
       toast.success('Organisation created successfully!');
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };

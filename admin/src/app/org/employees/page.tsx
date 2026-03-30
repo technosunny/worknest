@@ -35,7 +35,7 @@ export default function EmployeesPage() {
     const fetchEmployees = async () => {
       try {
         const res = await api.get('/api/org/employees');
-        const list = res.data.employees || res.data || [];
+        const list = res.data.data || [];
         setEmployees(list);
         const depts = [...new Set(list.map((e: Employee) => e.department).filter(Boolean))] as string[];
         setDepartments(depts);

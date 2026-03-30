@@ -52,8 +52,8 @@ export default function OrgDetailPage() {
     const fetchOrg = async () => {
       try {
         const res = await api.get(`/api/super-admin/organisations/${id}`);
-        setOrg(res.data.organisation || res.data);
-        const data = res.data.organisation || res.data;
+        setOrg(res.data.data);
+        const data = res.data.data;
         reset({ name: data.name, plan: data.plan, status: data.status });
       } catch {
         toast.error('Failed to load organisation');
@@ -69,7 +69,7 @@ export default function OrgDetailPage() {
     setIsSaving(true);
     try {
       const res = await api.patch(`/api/super-admin/organisations/${id}`, data);
-      setOrg(res.data.organisation || res.data);
+      setOrg(res.data.data);
       setIsEditing(false);
       toast.success('Organisation updated');
     } catch (err: unknown) {

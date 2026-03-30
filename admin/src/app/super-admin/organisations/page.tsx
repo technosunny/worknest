@@ -33,7 +33,7 @@ export default function OrganisationsPage() {
     const fetchOrgs = async () => {
       try {
         const res = await api.get('/api/super-admin/organisations');
-        setOrgs(res.data.organisations || res.data || []);
+        setOrgs(res.data.data || []);
       } catch {
         toast.error('Failed to load organisations');
       } finally {

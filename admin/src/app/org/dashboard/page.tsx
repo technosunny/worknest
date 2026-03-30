@@ -35,7 +35,7 @@ export default function OrgDashboard() {
     const fetchStats = async () => {
       try {
         const res = await api.get('/api/org/dashboard');
-        setStats(res.data);
+        setStats(res.data.data);
       } catch {
         toast.error('Failed to load dashboard stats');
       } finally {
