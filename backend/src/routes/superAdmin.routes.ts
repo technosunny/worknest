@@ -4,6 +4,7 @@ import {
   createOrganisation,
   getOrganisation,
   updateOrganisation,
+  deleteOrganisation,
   getDashboard,
 } from '../controllers/superAdmin.controller';
 import { authenticate } from '../middleware/auth.middleware';
@@ -19,5 +20,6 @@ router.get('/organisations', listOrganisations);
 router.post('/organisations', createOrganisation);
 router.get('/organisations/:id', getOrganisation);
 router.patch('/organisations/:id', updateOrganisation);
+router.delete('/organisations/:id', deleteOrganisation);
 
 export default router;

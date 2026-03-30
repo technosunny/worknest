@@ -253,6 +253,25 @@ export async function updateOrganisation(
   }
 }
 
+export async function deleteOrganisation(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id } = req.params;
+
+    // Delete users belonging to the org first
+    await prisma.attendance.deleteMany({ where: { org_id: id } });
+    await prisma.user.deleteMany({ where: { org_id: id } });
+    await prisma.organisation.delete({ where: { id } });
+
+    sendSuccess(res, null, 'Organisation deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function getDashboard(
   _req: Request,
   res: Response,
