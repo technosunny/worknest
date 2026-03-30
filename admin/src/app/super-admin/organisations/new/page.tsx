@@ -28,7 +28,7 @@ type FormData = z.infer<typeof schema>;
 
 interface CreatedOrg {
   organisation: { name: string; slug: string };
-  admin: { email: string; temporaryPassword: string };
+  admin: { email: string; generatedPassword: string };
 }
 
 export default function NewOrganisationPage() {
@@ -56,8 +56,8 @@ export default function NewOrganisationPage() {
   };
 
   const copyPassword = () => {
-    if (created?.admin?.temporaryPassword) {
-      navigator.clipboard.writeText(created.admin.temporaryPassword);
+    if (created?.admin?.generatedPassword) {
+      navigator.clipboard.writeText(created.admin.generatedPassword);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -179,7 +179,7 @@ export default function NewOrganisationPage() {
                   <p className="text-xs text-gray-500 mb-0.5">Temporary Password</p>
                   <div className="flex items-center gap-2 mt-1">
                     <code className="flex-1 bg-white border rounded px-3 py-1.5 text-sm font-mono">
-                      {created.admin?.temporaryPassword}
+                      {created.admin?.generatedPassword}
                     </code>
                     <Button size="sm" variant="outline" onClick={copyPassword}>
                       {copied ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
