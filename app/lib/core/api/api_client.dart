@@ -1,13 +1,10 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/app_constants.dart';
 import 'api_endpoints.dart';
 
 class ApiClient {
   late Dio _dio;
-  final FlutterSecureStorage _storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
   bool _isRefreshing = false;
 
   static final ApiClient _instance = ApiClient._internal();
@@ -23,7 +20,8 @@ class ApiClient {
 
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = await _storage.read(key: AppConstants.tokenKey);
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString(AppConstants.tokenKey);
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -35,7 +33,8 @@ class ApiClient {
           try {
             final refreshed = await _refreshToken();
             if (refreshed) {
-              final token = await _storage.read(key: AppConstants.tokenKey);
+              final prefs = await SharedPreferences.getInstance();
+              final token = prefs.getString(AppConstants.tokenKey);
               error.requestOptions.headers['Authorization'] = 'Bearer $token';
               final response = await _dio.fetch(error.requestOptions);
               handler.resolve(response);
@@ -53,13 +52,14 @@ class ApiClient {
   }
 
   Future<bool> _refreshToken() async {
-    final refreshToken = await _storage.read(key: AppConstants.refreshTokenKey);
+    final prefs = await SharedPreferences.getInstance();
+    final refreshToken = prefs.getString(AppConstants.refreshTokenKey);
     if (refreshToken == null) return false;
     try {
       final response = await Dio(BaseOptions(baseUrl: AppConstants.baseUrl))
           .post(ApiEndpoints.refresh, data: {'refreshToken': refreshToken});
       final data = response.data['data'];
-      await _storage.write(key: AppConstants.tokenKey, value: data['accessToken']);
+      await prefs.setString(AppConstants.tokenKey, data['accessToken']);
       return true;
     } catch (_) {
       return false;
@@ -67,8 +67,9 @@ class ApiClient {
   }
 
   Future<void> _clearTokens() async {
-    await _storage.delete(key: AppConstants.tokenKey);
-    await _storage.delete(key: AppConstants.refreshTokenKey);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(AppConstants.tokenKey);
+    await prefs.remove(AppConstants.refreshTokenKey);
   }
 
   Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) {
@@ -84,14 +85,16 @@ class ApiClient {
   }
 
   Future<void> saveTokens(String accessToken, String refreshToken) async {
-    await _storage.write(key: AppConstants.tokenKey, value: accessToken);
-    await _storage.write(key: AppConstants.refreshTokenKey, value: refreshToken);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(AppConstants.tokenKey, accessToken);
+    await prefs.setString(AppConstants.refreshTokenKey, refreshToken);
   }
 
   Future<void> clearTokens() => _clearTokens();
 
   Future<bool> hasToken() async {
-    final token = await _storage.read(key: AppConstants.tokenKey);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AppConstants.tokenKey);
     return token != null;
   }
 }
