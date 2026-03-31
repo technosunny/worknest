@@ -21,22 +21,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final isLoggedIn = await _authRepo.isLoggedIn();
-    if (!isLoggedIn) {
-      emit(AuthUnauthenticated());
-      return;
-    }
     try {
-      final user = await _profileRepo.getProfile();
-      await _authRepo.saveUserLocally(user);
-      emit(AuthAuthenticated(user));
-    } catch (_) {
-      final cached = await _authRepo.getCachedUser();
-      if (cached != null) {
-        emit(AuthAuthenticated(cached));
-      } else {
+      final isLoggedIn = await _authRepo.isLoggedIn().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => false,
+      );
+      if (!isLoggedIn) {
         emit(AuthUnauthenticated());
+        return;
       }
+      try {
+        final user = await _profileRepo.getProfile();
+        await _authRepo.saveUserLocally(user);
+        emit(AuthAuthenticated(user));
+      } catch (_) {
+        final cached = await _authRepo.getCachedUser();
+        if (cached != null) {
+          emit(AuthAuthenticated(cached));
+        } else {
+          emit(AuthUnauthenticated());
+        }
+      }
+    } catch (_) {
+      emit(AuthUnauthenticated());
     }
   }
 

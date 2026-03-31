@@ -12,6 +12,10 @@ class AttendanceRepository {
       final response = await _client.get(ApiEndpoints.attendanceToday);
       final data = response.data['data'];
       if (data == null) return null;
+      // API returns {checked_in: false, status: "not_recorded"} when no record exists
+      if (data is Map && (data['checked_in'] == false && data['id'] == null)) {
+        return null;
+      }
       return AttendanceModel.fromJson(data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
