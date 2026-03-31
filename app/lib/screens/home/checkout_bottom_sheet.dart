@@ -75,8 +75,9 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     return BlocConsumer<AttendanceBloc, AttendanceState>(
       listener: (context, state) {
         if (state is AttendanceCheckOutSuccess) {
-          Navigator.pop(context);
-          _showSuccessDialog(state.attendance);
+          final nav = Navigator.of(context);
+          nav.pop();
+          _showSuccessDialog(nav.context, state.attendance);
         } else if (state is AttendanceError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -230,11 +231,11 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     );
   }
 
-  void _showSuccessDialog(AttendanceModel attendance) {
+  void _showSuccessDialog(BuildContext parentContext, AttendanceModel attendance) {
     showDialog(
-      context: context,
+      context: parentContext,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -269,7 +270,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Done'),
           ),
         ],

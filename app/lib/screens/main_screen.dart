@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/attendance/attendance_bloc.dart';
+import '../bloc/attendance/attendance_event.dart';
 import '../bloc/profile/profile_bloc.dart';
 import '../core/theme/app_theme.dart';
 import 'attendance/attendance_history_screen.dart';
@@ -17,11 +18,15 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    AttendanceHistoryScreen(),
-    ProfileScreen(),
-  ];
+  void _switchTab(BuildContext context, int index) {
+    setState(() => _currentIndex = index);
+    final bloc = context.read<AttendanceBloc>();
+    if (index == 0) {
+      bloc.add(AttendanceLoadToday());
+    } else if (index == 1) {
+      bloc.add(AttendanceLoadHistory());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +35,15 @@ class _MainScreenState extends State<MainScreen> {
         BlocProvider(create: (_) => AttendanceBloc()),
         BlocProvider(create: (_) => ProfileBloc()),
       ],
-      child: Scaffold(
+      child: Builder(
+        builder: (innerContext) => Scaffold(
         body: IndexedStack(
           index: _currentIndex,
-          children: _screens,
+          children: const [
+            HomeScreen(),
+            AttendanceHistoryScreen(),
+            ProfileScreen(),
+          ],
         ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
@@ -59,7 +69,7 @@ class _MainScreenState extends State<MainScreen> {
                     icon: Icons.home_outlined,
                     activeIcon: Icons.home_rounded,
                     label: 'Home',
-                    onTap: () => setState(() => _currentIndex = 0),
+                    onTap: () => _switchTab(innerContext, 0),
                   ),
                   _NavItem(
                     index: 1,
@@ -67,7 +77,7 @@ class _MainScreenState extends State<MainScreen> {
                     icon: Icons.calendar_today_outlined,
                     activeIcon: Icons.calendar_today_rounded,
                     label: 'History',
-                    onTap: () => setState(() => _currentIndex = 1),
+                    onTap: () => _switchTab(innerContext, 1),
                   ),
                   _NavItem(
                     index: 2,
@@ -75,13 +85,14 @@ class _MainScreenState extends State<MainScreen> {
                     icon: Icons.person_outline_rounded,
                     activeIcon: Icons.person_rounded,
                     label: 'Profile',
-                    onTap: () => setState(() => _currentIndex = 2),
+                    onTap: () => _switchTab(innerContext, 2),
                   ),
                 ],
               ),
             ),
           ),
         ),
+      ),
       ),
     );
   }
