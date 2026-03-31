@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HR360Flow - Smart HR & Attendance Management</title>
+  <meta name="description" content="HR360Flow - GPS-based attendance tracking, employee management, and HR automation for modern businesses.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text y='65' x='50' text-anchor='middle' fill='white' font-size='40' font-family='sans-serif' font-weight='bold'>HR</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; line-height: 1.6; }
+    
+    .nav { padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; }
+    .logo { font-size: 24px; font-weight: 800; color: #2563eb; text-decoration: none; }
+    .nav-links a { margin-left: 32px; text-decoration: none; color: #64748b; font-size: 14px; font-weight: 500; }
+    .nav-links a:hover { color: #2563eb; }
+    
+    .hero { text-align: center; padding: 80px 20px 60px; max-width: 800px; margin: 0 auto; }
+    .hero h1 { font-size: 48px; font-weight: 800; line-height: 1.1; margin-bottom: 20px; }
+    .hero h1 span { color: #2563eb; }
+    .hero p { font-size: 18px; color: #64748b; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .btn { display: inline-block; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 600; text-decoration: none; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-outline { border: 2px solid #e2e8f0; color: #1e293b; margin-left: 12px; }
+    
+    .features { padding: 80px 20px; max-width: 1100px; margin: 0 auto; }
+    .features h2 { text-align: center; font-size: 32px; font-weight: 700; margin-bottom: 48px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 32px; }
+    .card-icon { width: 48px; height: 48px; background: #dbeafe; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; }
+    .card h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .card p { color: #64748b; font-size: 14px; }
+    
+    .cta { text-align: center; padding: 80px 20px; background: #f1f5f9; }
+    .cta h2 { font-size: 32px; font-weight: 700; margin-bottom: 16px; }
+    .cta p { color: #64748b; margin-bottom: 32px; }
+    
+    footer { padding: 40px 20px; text-align: center; border-top: 1px solid #e2e8f0; }
+    footer a { color: #64748b; text-decoration: none; margin: 0 16px; font-size: 14px; }
+    footer a:hover { color: #2563eb; }
+    .copyright { color: #94a3b8; font-size: 13px; margin-top: 16px; }
+    
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="/" class="logo">HR360Flow</a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms</a>
+      <a href="mailto:support@hr360flow.com">Contact</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>Smart HR & <span>Attendance</span> Management</h1>
+    <p>GPS-based check-in/out with selfie verification, real-time attendance tracking, and complete employee management — all in one platform.</p>
+    <a href="https://play.google.com/store/apps/details?id=com.hr360flow.worknest_app" class="btn btn-primary">Download App</a>
+    <a href="https://admin.hr360flow.com" class="btn btn-outline">Admin Panel</a>
+  </section>
+
+  <section class="features" id="features">
+    <h2>Everything you need to manage your workforce</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">📍</div>
+        <h3>GPS Check-in/Out</h3>
+        <p>Employees check in with GPS location verification. Know exactly where and when your team starts and ends their day.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📸</div>
+        <h3>Selfie Verification</h3>
+        <p>Selfie capture on check-in prevents buddy punching and ensures the right person is at the right place.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Real-time Dashboard</h3>
+        <p>Live attendance view, monthly reports, and CSV exports. See who's checked in, who hasn't, and total hours worked.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h3>Employee Management</h3>
+        <p>Add employees, manage departments, designations, and shifts. Complete HR tooling in one place.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏢</div>
+        <h3>Multi-tenant</h3>
+        <p>Each organisation gets their own branded portal with custom logo and colors. One platform, many businesses.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📱</div>
+        <h3>Mobile-first</h3>
+        <p>Native Android app for employees with live timer, attendance history, and profile management.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Ready to modernize your HR?</h2>
+    <p>Get started in minutes. No credit card required.</p>
+    <a href="mailto:support@hr360flow.com" class="btn btn-primary">Contact Sales</a>
+  </section>
+
+  <footer>
+    <div>
+      <a href="/privacy-policy.html">Privacy Policy</a>
+      <a href="/terms.html">Terms & Conditions</a>
+      <a href="mailto:support@hr360flow.com">Support</a>
+    </div>
+    <p class="copyright">&copy; 2026 HR360Flow by Epik Technocravers. All rights reserved.</p>
+  </footer>
+</body>
+</html>
