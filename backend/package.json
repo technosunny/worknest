@@ -1,7 +1,7 @@
 {
-  "name": "worknest-backend",
+  "name": "hr360flow-backend",
   "version": "1.0.0",
-  "description": "WorkNest HR - Multi-tenant SaaS HR Platform Backend",
+  "description": "HR360Flow - Multi-tenant SaaS HR Platform Backend",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

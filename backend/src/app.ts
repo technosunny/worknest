@@ -37,7 +37,7 @@ app.use('/uploads', express.static(path.join(process.cwd(), uploadDir)));
 app.get('/health', (_req, res) => {
   res.json({
     success: true,
-    message: 'WorkNest HR API is running',
+    message: 'HR360Flow API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
   });

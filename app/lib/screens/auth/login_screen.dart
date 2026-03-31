@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Sign in to your WorkNest account',
+          'Sign in to your HR360Flow account',
           style: TextStyle(
             fontSize: 15,
             color: AppTheme.textSecondary,
@@ -242,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildFooter() {
     return Center(
       child: Text(
-        'WorkNest HR v1.0',
+        'HR360Flow v1.0',
         style: TextStyle(
           fontSize: 12,
           color: AppTheme.textLight,

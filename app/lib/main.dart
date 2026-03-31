@@ -22,7 +22,7 @@ void main() async {
       debugPrint('Flutter error: ${details.exception}');
     };
 
-    runApp(const WorkNestApp());
+    runApp(const HR360FlowApp());
   }, (error, stack) {
     debugPrint('Uncaught error: $error');
     debugPrint('Stack: $stack');

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.hr360flow" "\0"
-            VALUE "FileDescription", "worknest_app" "\0"
+            VALUE "FileDescription", "HR360Flow" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "worknest_app" "\0"
+            VALUE "InternalName", "hr360flow" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.hr360flow. All rights reserved." "\0"
             VALUE "OriginalFilename", "worknest_app.exe" "\0"
-            VALUE "ProductName", "worknest_app" "\0"
+            VALUE "ProductName", "HR360Flow" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

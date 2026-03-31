@@ -1,5 +1,5 @@
 name: worknest_app
-description: "WorkNest HR - Employee Attendance App"
+description: "HR360Flow - Employee Attendance App"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -41,6 +41,9 @@ dependencies:
 
   # Image display
   cached_network_image: ^3.4.1
+
+  # Web camera support
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:

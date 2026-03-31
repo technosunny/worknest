@@ -74,7 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _onCheckInPressed() async {
     final result = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => const CheckInScreen()),
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: context.read<AttendanceBloc>(),
+          child: const CheckInScreen(),
+        ),
+      ),
     );
     if (result == true) {
       context.read<AttendanceBloc>().add(AttendanceLoadToday());

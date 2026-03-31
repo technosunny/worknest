@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Worknest App</string>
+	<string>HR360Flow</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -50,13 +50,13 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>WorkNest needs camera access to capture your selfie for check-in verification.</string>
+	<string>HR360Flow needs camera access to capture your selfie for check-in verification.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>WorkNest needs your location to record your check-in and check-out location.</string>
+	<string>HR360Flow needs your location to record your check-in and check-out location.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>WorkNest needs your location to record your check-in and check-out location.</string>
+	<string>HR360Flow needs your location to record your check-in and check-out location.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>WorkNest needs photo library access to select profile photos.</string>
+	<string>HR360Flow needs photo library access to select profile photos.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

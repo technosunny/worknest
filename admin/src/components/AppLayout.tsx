@@ -41,7 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const links = user?.role === 'super_admin' ? superAdminLinks : orgAdminLinks;
 
   const logoUrl = branding?.logo_url;
-  const orgName = branding?.name || 'WorkNest HR';
+  const orgName = branding?.name || 'HR360Flow';
   const brandColour = branding?.brand_colour || '#2563eb';
   const isOrgAdmin = user?.role === 'org_admin';
 
@@ -66,7 +66,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <div>
-          <h1 className="font-bold text-base leading-tight">{isOrgAdmin ? orgName : 'WorkNest HR'}</h1>
+          <h1 className="font-bold text-base leading-tight">{isOrgAdmin ? orgName : 'HR360Flow'}</h1>
           <p className="text-xs text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             ) : (
               <Briefcase className="w-5 h-5 text-blue-600" />
             )}
-            <span className="font-bold text-sm">{isOrgAdmin ? orgName : 'WorkNest HR'}</span>
+            <span className="font-bold text-sm">{isOrgAdmin ? orgName : 'HR360Flow'}</span>
           </div>
         </header>
 

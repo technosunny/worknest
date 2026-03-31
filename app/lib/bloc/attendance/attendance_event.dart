@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 
 abstract class AttendanceEvent extends Equatable {
@@ -21,12 +21,12 @@ class AttendanceLoadMoreHistory extends AttendanceEvent {}
 class AttendanceCheckIn extends AttendanceEvent {
   final double latitude;
   final double longitude;
-  final File selfie;
+  final Uint8List selfieBytes;
 
   AttendanceCheckIn({
     required this.latitude,
     required this.longitude,
-    required this.selfie,
+    required this.selfieBytes,
   });
 
   @override

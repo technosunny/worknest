@@ -15,7 +15,7 @@ interface BrandingContextValue {
 }
 
 const DEFAULT_BRANDING: Branding = {
-  name: 'WorkNest HR',
+  name: 'HR360Flow',
   slug: '',
   logo_url: null,
   brand_colour: '#2563eb',

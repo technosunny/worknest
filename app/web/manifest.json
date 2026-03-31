@@ -1,6 +1,6 @@
 {
-    "name": "worknest_app",
-    "short_name": "worknest_app",
+    "name": "HR360Flow",
+    "short_name": "HR360Flow",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

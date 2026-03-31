@@ -45,7 +45,7 @@ export default function LoginPage() {
   };
 
   const brandColour = branding?.brand_colour || '#2563eb';
-  const orgName = branding?.name || 'WorkNest HR';
+  const orgName = branding?.name || 'HR360Flow';
   const hasOrgBranding = isLoaded && branding && branding.slug !== '';
 
   return (

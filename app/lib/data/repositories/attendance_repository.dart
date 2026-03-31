@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_endpoints.dart';
@@ -27,14 +27,14 @@ class AttendanceRepository {
   Future<AttendanceModel> checkIn({
     required double latitude,
     required double longitude,
-    required File selfie,
+    required Uint8List selfieBytes,
   }) async {
     try {
       final formData = FormData.fromMap({
         'lat': latitude.toString(),
         'lng': longitude.toString(),
-        'selfie': await MultipartFile.fromFile(
-          selfie.path,
+        'selfie': MultipartFile.fromBytes(
+          selfieBytes,
           filename: 'selfie_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ),
       });

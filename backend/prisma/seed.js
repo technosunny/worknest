@@ -6,13 +6,13 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
-  const passwordHash = await bcrypt.hash('WorkNest@2026', 12);
+  const passwordHash = await bcrypt.hash('HR360Flow@2026', 12);
 
   const superAdmin = await prisma.user.upsert({
-    where: { email: 'admin@worknest.in' },
+    where: { email: 'admin@hr360flow.com' },
     update: {},
     create: {
-      email: 'admin@worknest.in',
+      email: 'admin@hr360flow.com',
       password_hash: passwordHash,
       role: 'super_admin',
       first_name: 'Super',

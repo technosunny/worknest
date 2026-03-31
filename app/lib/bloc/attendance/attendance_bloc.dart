@@ -83,7 +83,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final attendance = await _repo.checkIn(
         latitude: event.latitude,
         longitude: event.longitude,
-        selfie: event.selfie,
+        selfieBytes: event.selfieBytes,
       );
       emit(AttendanceCheckInSuccess(attendance));
     } catch (e) {

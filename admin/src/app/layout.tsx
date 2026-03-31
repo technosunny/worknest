@@ -8,8 +8,8 @@ import { Toaster } from 'sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'WorkNest HR',
-  description: 'WorkNest HR Admin Panel',
+  title: 'HR360Flow',
+  description: 'HR360Flow Admin Panel',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

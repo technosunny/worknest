@@ -7,15 +7,15 @@ import 'core/theme/app_theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 
-class WorkNestApp extends StatelessWidget {
-  const WorkNestApp({super.key});
+class HR360FlowApp extends StatelessWidget {
+  const HR360FlowApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => AuthBloc()..add(AuthCheckRequested()),
       child: MaterialApp(
-        title: 'WorkNest HR',
+        title: 'HR360Flow',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.theme,
         home: const _AuthGate(),
@@ -65,7 +65,7 @@ class _SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             const Text(
-              'WorkNest',
+              'HR360Flow',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w700,
