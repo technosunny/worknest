@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
 import '../../bloc/attendance/attendance_bloc.dart';
 import '../../bloc/attendance/attendance_event.dart';
 import '../../bloc/attendance/attendance_state.dart';
@@ -22,24 +22,38 @@ class _CheckInScreenState extends State<CheckInScreen> {
   Position? _position;
   bool _isGettingLocation = false;
   String? _locationError;
+
+  // Web camera
   String? _cameraViewId;
   bool _cameraFailed = false;
-  final ImagePicker _picker = ImagePicker();
+
+  // Mobile camera (front-facing only)
+  CameraController? _cameraController;
+  bool _isCameraReady = false;
 
   @override
   void initState() {
     super.initState();
     _getLocation();
-    if (kIsWeb) _initCamera();
+    if (kIsWeb) {
+      _initWebCamera();
+    } else {
+      _initMobileCamera();
+    }
   }
 
   @override
   void dispose() {
-    if (kIsWeb) disposeWebCamera();
+    if (kIsWeb) {
+      disposeWebCamera();
+    } else {
+      _cameraController?.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _initCamera() async {
+  // ── Web camera ──────────────────────────────────────────────
+  Future<void> _initWebCamera() async {
     final viewId = await initWebCamera();
     if (mounted) {
       setState(() {
@@ -49,6 +63,64 @@ class _CheckInScreenState extends State<CheckInScreen> {
     }
   }
 
+  Future<void> _captureFromWebCamera() async {
+    final bytes = await captureWebFrame();
+    if (bytes != null && mounted) {
+      setState(() => _capturedBytes = bytes);
+    }
+  }
+
+  // ── Mobile camera (front only, no swap) ─────────────────────
+  Future<void> _initMobileCamera() async {
+    try {
+      final cameras = await availableCameras();
+      // Find front camera
+      final frontCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first, // fallback if no front camera
+      );
+
+      _cameraController = CameraController(
+        frontCamera,
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+
+      await _cameraController!.initialize();
+      if (mounted) {
+        setState(() => _isCameraReady = true);
+      }
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+      if (mounted) {
+        setState(() => _cameraFailed = true);
+      }
+    }
+  }
+
+  Future<void> _captureFromMobileCamera() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
+    try {
+      final xFile = await _cameraController!.takePicture();
+      final bytes = await xFile.readAsBytes();
+      if (mounted) {
+        setState(() => _capturedBytes = bytes);
+        // Dispose camera after capture to free resources
+        _cameraController?.dispose();
+        _cameraController = null;
+        _isCameraReady = false;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Capture error: $e'), backgroundColor: AppTheme.error),
+        );
+      }
+    }
+  }
+
+  // ── Location ────────────────────────────────────────────────
   Future<void> _getLocation() async {
     setState(() {
       _isGettingLocation = true;
@@ -83,38 +155,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
     }
   }
 
-  Future<void> _captureFromWebCamera() async {
-    final bytes = await captureWebFrame();
-    if (bytes != null && mounted) {
-      setState(() => _capturedBytes = bytes);
-    }
-  }
-
-  Future<void> _pickFromGallery() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 85,
-      );
-      if (photo != null && mounted) {
-        final bytes = await photo.readAsBytes();
-        setState(() => _capturedBytes = bytes);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Camera error: $e'), backgroundColor: AppTheme.error),
-        );
-      }
-    }
-  }
-
+  // ── Retake / Submit ─────────────────────────────────────────
   void _retake() {
     setState(() => _capturedBytes = null);
-    if (kIsWeb && _cameraViewId == null) _initCamera();
+    if (kIsWeb) {
+      if (_cameraViewId == null) _initWebCamera();
+    } else {
+      _initMobileCamera();
+    }
   }
 
   void _submit() {
@@ -126,6 +174,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
         ));
   }
 
+  // ── Build ───────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return BlocListener<AttendanceBloc, AttendanceState>(
@@ -168,7 +217,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   Widget _buildSelfieSection() {
-    // Show captured image
+    // ── Captured image ──
     if (_capturedBytes != null) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -178,19 +227,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.success, width: 3),
               boxShadow: [
-                BoxShadow(
-                  color: AppTheme.success.withAlpha(60),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
+                BoxShadow(color: AppTheme.success.withAlpha(60), blurRadius: 20, spreadRadius: 2),
               ],
             ),
             child: ClipOval(
-              child: SizedBox(
-                width: 250,
-                height: 250,
-                child: Image.memory(_capturedBytes!, fit: BoxFit.cover),
-              ),
+              child: SizedBox(width: 250, height: 250, child: Image.memory(_capturedBytes!, fit: BoxFit.cover)),
             ),
           ),
           const SizedBox(height: 16),
@@ -213,7 +254,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
       );
     }
 
-    // Web: show live camera preview in circle
+    // ── Web: live camera preview ──
     if (kIsWeb && _cameraViewId != null) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -223,26 +264,53 @@ class _CheckInScreenState extends State<CheckInScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.primary, width: 3),
               boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primary.withAlpha(40),
-                  blurRadius: 20,
-                  spreadRadius: 2,
-                ),
+                BoxShadow(color: AppTheme.primary.withAlpha(40), blurRadius: 20, spreadRadius: 2),
               ],
             ),
             child: buildWebCameraPreview(250, _cameraViewId!),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Position your face in the circle',
-            style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
-          ),
+          const Text('Position your face in the circle', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
         ],
       );
     }
 
-    // Web camera loading
-    if (kIsWeb && !_cameraFailed) {
+    // ── Mobile: live camera preview (front-facing, no swap) ──
+    if (!kIsWeb && _isCameraReady && _cameraController != null) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.primary, width: 3),
+              boxShadow: [
+                BoxShadow(color: AppTheme.primary.withAlpha(40), blurRadius: 20, spreadRadius: 2),
+              ],
+            ),
+            child: ClipOval(
+              child: SizedBox(
+                width: 250,
+                height: 250,
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _cameraController!.value.previewSize?.height ?? 250,
+                    height: _cameraController!.value.previewSize?.width ?? 250,
+                    child: CameraPreview(_cameraController!),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Position your face in the circle', style: TextStyle(fontSize: 14, color: AppTheme.textSecondary)),
+        ],
+      );
+    }
+
+    // ── Loading camera ──
+    if (!_cameraFailed) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -269,36 +337,28 @@ class _CheckInScreenState extends State<CheckInScreen> {
       );
     }
 
-    // Mobile or camera failed: show tap-to-capture placeholder
-    return GestureDetector(
-      onTap: _pickFromGallery,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border, width: 2),
+    // ── Camera failed fallback ──
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 250,
+          height: 250,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppTheme.background,
+            border: Border.all(color: AppTheme.border, width: 3),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.camera_alt_rounded, size: 44, color: AppTheme.textLight),
+              SizedBox(height: 12),
+              Text('Camera unavailable', style: TextStyle(fontSize: 14, color: AppTheme.textLight)),
+            ],
+          ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppTheme.primaryLight,
-                border: Border.all(color: AppTheme.primary.withAlpha(80), width: 3),
-              ),
-              child: const Icon(Icons.camera_alt_rounded, size: 44, color: AppTheme.primary),
-            ),
-            const SizedBox(height: 16),
-            const Text('Tap to take selfie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-            const SizedBox(height: 4),
-            const Text('Opens your camera for a quick selfie', style: TextStyle(fontSize: 13, color: AppTheme.textLight)),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
@@ -313,9 +373,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
       child: Row(
         children: [
           Icon(
-            _position != null ? Icons.check_circle_rounded : _isGettingLocation ? Icons.location_searching_rounded : Icons.location_off_rounded,
+            _position != null
+                ? Icons.check_circle_rounded
+                : _isGettingLocation
+                    ? Icons.location_searching_rounded
+                    : Icons.location_off_rounded,
             size: 20,
-            color: _position != null ? AppTheme.success : _locationError != null ? AppTheme.error : AppTheme.textLight,
+            color: _position != null
+                ? AppTheme.success
+                : _locationError != null
+                    ? AppTheme.error
+                    : AppTheme.textLight,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -325,7 +393,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   : _locationError ?? 'Getting location...',
               style: TextStyle(
                 fontSize: 13,
-                color: _position != null ? AppTheme.success : _locationError != null ? AppTheme.error : AppTheme.textSecondary,
+                color: _position != null
+                    ? AppTheme.success
+                    : _locationError != null
+                        ? AppTheme.error
+                        : AppTheme.textSecondary,
               ),
             ),
           ),
@@ -344,7 +416,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
       builder: (context, state) {
         final isSubmitting = state is AttendanceCheckInLoading;
 
-        // Web with live camera: show capture button
+        // Web with live camera: capture button
         if (kIsWeb && _cameraViewId != null && _capturedBytes == null) {
           return SizedBox(
             width: double.infinity,
@@ -363,15 +435,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
           );
         }
 
-        // No selfie yet (mobile / camera failed)
-        if (_capturedBytes == null) {
+        // Mobile with live camera: capture button
+        if (!kIsWeb && _isCameraReady && _capturedBytes == null) {
           return SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: _pickFromGallery,
-              icon: const Icon(Icons.camera_alt_rounded, size: 20),
-              label: const Text('Take Selfie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              onPressed: _captureFromMobileCamera,
+              icon: const Icon(Icons.camera_rounded, size: 22),
+              label: const Text('Capture Selfie', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
@@ -383,31 +455,36 @@ class _CheckInScreenState extends State<CheckInScreen> {
         }
 
         // Selfie captured: show submit
-        final canSubmit = _position != null && !isSubmitting;
-        return SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: canSubmit ? _submit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.success,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppTheme.border,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
+        if (_capturedBytes != null) {
+          final canSubmit = _position != null && !isSubmitting;
+          return SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: canSubmit ? _submit : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.success,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppTheme.border,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, size: 20),
+                        SizedBox(width: 8),
+                        Text('Submit Check In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
             ),
-            child: isSubmitting
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle_outline_rounded, size: 20),
-                      SizedBox(width: 8),
-                      Text('Submit Check In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-          ),
-        );
+          );
+        }
+
+        // Camera loading or failed - no action button needed
+        return const SizedBox.shrink();
       },
     );
   }
