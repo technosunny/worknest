@@ -493,7 +493,7 @@ export async function bulkImportEmployees(
     const rowSchema = z.object({
       email: z.string().email('Invalid email'),
       first_name: z.string().min(1, 'First name required'),
-      last_name: z.string().min(1, 'Last name required'),
+      last_name: z.string().optional().default(''),
       emp_code: z.string().optional(),
       phone: z.string().optional(),
       designation: z.string().optional(),
