@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Settings,
   ClipboardList,
+  CalendarClock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -29,6 +30,7 @@ const orgAdminLinks = [
   { href: '/org/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/org/employees', label: 'Employees', icon: Users },
   { href: '/org/attendance', label: 'Attendance', icon: ClipboardList },
+  { href: '/org/roster', label: 'Roster', icon: CalendarClock },
   { href: '/org/settings', label: 'Settings', icon: Settings },
 ];
 

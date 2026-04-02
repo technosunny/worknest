@@ -58,6 +58,7 @@ model Organisation {
 
   users      User[]
   attendance Attendance[]
+  rosters    Roster[]
 
   @@map("organisations")
 }
@@ -85,6 +86,7 @@ model User {
   reporting_manager User?        @relation("ReportingManager", fields: [reporting_manager_id], references: [id])
   direct_reports    User[]       @relation("ReportingManager")
   attendance        Attendance[]
+  rosters          Roster[]
 
   @@unique([org_id, employee_id])
   @@map("users")
@@ -111,4 +113,22 @@ model Attendance {
 
   @@unique([org_id, user_id, date])
   @@map("attendance")
+}
+
+model Roster {
+  id          String   @id @default(uuid())
+  org_id      String
+  user_id     String
+  date        DateTime @db.Date
+  shift_type  String   // dayshift, nightshift, WOF
+  shift_start String?  // e.g. "06:00"
+  shift_end   String?  // e.g. "18:00"
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  organisation Organisation @relation(fields: [org_id], references: [id])
+  user         User         @relation(fields: [user_id], references: [id])
+
+  @@unique([org_id, user_id, date])
+  @@map("rosters")
 }

@@ -411,19 +411,19 @@ function normalizeHeaders(raw: Record<string, string>): Record<string, string> {
   const mapped: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     const k = key.trim().toLowerCase().replace(/\s+/g, '_');
-    if (k === 'official_email_id' || k === 'email_id' || k === 'email') {
+    if (k.includes('email')) {
       mapped.email = value;
-    } else if (k === 'emp_first_name' || k === 'first_name') {
+    } else if (k.includes('first') && k.includes('name')) {
       mapped.first_name = value;
-    } else if (k === 'emp_last_name' || k === 'last_name') {
+    } else if (k.includes('last') && k.includes('name')) {
       mapped.last_name = value;
-    } else if (k === 'emp_code' || k === 'employee_code' || k === 'employee_id') {
+    } else if (k.includes('emp') && k.includes('code') || k === 'employee_id') {
       mapped.emp_code = value;
-    } else if (k === 'phone' || k === 'phone_number' || k === 'mobile') {
+    } else if (k.includes('phone') || k.includes('mobile')) {
       mapped.phone = value;
-    } else if (k === 'designation' || k === 'title' || k === 'role_title') {
+    } else if (k.includes('designation') || k === 'title' || k === 'role_title') {
       mapped.designation = value;
-    } else if (k === 'department' || k === 'dept') {
+    } else if (k.includes('department') || k === 'dept') {
       mapped.department = value;
     } else if (k === 'shift') {
       mapped.shift = value;
@@ -456,6 +456,7 @@ export async function bulkImportEmployees(
             columns: true,
             skip_empty_lines: true,
             trim: true,
+            bom: true,
           })
         )
         .on('data', (row: Record<string, string>) => results.push(row))
@@ -466,7 +467,18 @@ export async function bulkImportEmployees(
     // Clean up uploaded file
     fs.unlink(filePath, () => {});
 
+    // Debug: log raw headers from first row
+    if (rawRecords.length > 0) {
+      console.log('CSV raw headers:', Object.keys(rawRecords[0]));
+      console.log('CSV first row raw:', rawRecords[0]);
+    }
+
     const records = rawRecords.map(normalizeHeaders) as unknown as CsvRow[];
+
+    // Debug: log normalized first row
+    if (records.length > 0) {
+      console.log('CSV first row normalized:', records[0]);
+    }
 
     if (records.length === 0) {
       sendBadRequest(res, 'CSV file is empty');

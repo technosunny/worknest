@@ -13,6 +13,7 @@ import {
   attendanceReport,
   todayAttendance,
 } from '../controllers/orgAdmin.controller';
+import { uploadRoster, getRoster } from '../controllers/roster.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { requireOrgAdmin } from '../middleware/role.middleware';
 import { requireOrgScope } from '../middleware/orgScope.middleware';
@@ -35,5 +36,7 @@ router.post('/employees/bulk-import', uploadCsv, bulkImportEmployees);
 router.get('/employees/:id', getEmployee);
 router.patch('/employees/:id', updateEmployee);
 router.delete('/employees/:id', deactivateEmployee);
+router.post('/roster/upload', uploadCsv, uploadRoster);
+router.get('/roster', getRoster);
 
 export default router;
