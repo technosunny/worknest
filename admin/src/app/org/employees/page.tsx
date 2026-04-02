@@ -71,7 +71,19 @@ export default function EmployeesPage() {
   });
 
   const handleDownloadTemplate = () => {
-    const csv = 'EMP CODE,Emp First Name,Emp last Name,Official Email ID\nFLO001,John,Doe,john.doe@company.com';
+    const headers = [
+      'EMP CODE','Emp First Name','Emp last Name','Father\'s/CO Name','Gender','DOB','Current Address',
+      'Permanent Address','Phone Number','DOJ','Emergency contact Person Name','Emergency contact Person No.',
+      'Emergency contact Person Relation','Personal Email ID','PAN','Adhaar','Highest Qualification',
+      'UAN No.','Designation','Department','Bank Account No','Bank Name','Bank IFSC Code','Official Email ID'
+    ];
+    const sample = [
+      'EMP001','John','Doe','Robert Doe','Male','15/06/1995','123 Main St, City',
+      '456 Home St, Town','9876543210','01/01/2026','Jane Doe','9876543211',
+      'Spouse','john.personal@gmail.com','ABCDE1234F','123456789012','B.Tech',
+      '100200300400','Software Engineer','Engineering','1234567890','HDFC Bank','HDFC0001234','john.doe@company.com'
+    ];
+    const csv = headers.join(',') + '\n' + sample.join(',');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -259,10 +271,11 @@ export default function EmployeesPage() {
 
             {/* Expected format */}
             <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-              <p className="font-medium text-gray-700 mb-1.5">Expected CSV columns:</p>
-              <code className="text-[11px] block bg-white rounded px-2 py-1.5 border">
-                EMP CODE, Emp First Name, Emp last Name, Official Email ID
+              <p className="font-medium text-gray-700 mb-1.5">CSV supports all employee fields:</p>
+              <code className="text-[10px] block bg-white rounded px-2 py-1.5 border leading-relaxed">
+                EMP CODE, Emp First Name, Emp last Name, Official Email ID, Phone Number, Designation, Department, Gender, DOB, DOJ, Father&apos;s/CO Name, Address, PAN, Adhaar, Bank details, Emergency contact, etc.
               </code>
+              <p className="mt-1.5 text-gray-500">Download the template for the full list of columns.</p>
             </div>
 
             {/* Success result */}
