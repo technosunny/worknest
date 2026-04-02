@@ -532,62 +532,89 @@ export async function bulkImportEmployees(
     // Check which emails already exist in DB
     const existingUsers = await prisma.user.findMany({
       where: { email: { in: emails } },
-      select: { email: true },
+      select: { id: true, email: true },
     });
+    const existingEmailMap = new Map(existingUsers.map((u) => [u.email, u.id]));
 
-    const existingEmails = new Set(existingUsers.map((u) => u.email));
-    const duplicateEmails = emails.filter((e) => existingEmails.has(e));
-
-    if (duplicateEmails.length > 0) {
-      sendConflict(res, `The following emails already exist: ${duplicateEmails.join(', ')}`);
-      return;
-    }
-
-    // Create all employees in a transaction
+    // Create new + update existing in a transaction
     const defaultPassword = `Welcome@${new Date().getFullYear()}`;
     const passwordHash = await hashPassword(defaultPassword);
 
-    const created = await prisma.$transaction(async (tx) => {
-      const createdEmployees = [];
-      for (const row of validRows) {
-        // Use EMP CODE from CSV if provided, otherwise auto-generate
-        const employeeId = row.emp_code || await generateUniqueEmployeeId(orgId);
+    let createdCount = 0;
+    let updatedCount = 0;
 
-        const employee = await tx.user.create({
-          data: {
-            org_id: orgId,
-            email: row.email.toLowerCase(),
-            phone: row.phone,
-            password_hash: passwordHash,
-            role: 'employee',
-            first_name: row.first_name,
-            last_name: row.last_name,
-            employee_id: employeeId,
-            designation: row.designation,
-            department: row.department,
-            shift: row.shift,
-            status: 'active',
-          },
-          select: {
-            id: true,
-            email: true,
-            first_name: true,
-            last_name: true,
-            employee_id: true,
-            department: true,
-            designation: true,
-          },
-        });
-        createdEmployees.push(employee);
+    const results = await prisma.$transaction(async (tx) => {
+      const allEmployees = [];
+      for (const row of validRows) {
+        const email = row.email.toLowerCase();
+        const existingId = existingEmailMap.get(email);
+
+        if (existingId) {
+          // Update existing employee
+          const updated = await tx.user.update({
+            where: { id: existingId },
+            data: {
+              first_name: row.first_name,
+              last_name: row.last_name,
+              ...(row.emp_code && { employee_id: row.emp_code }),
+              ...(row.phone && { phone: row.phone }),
+              ...(row.designation && { designation: row.designation }),
+              ...(row.department && { department: row.department }),
+              ...(row.shift && { shift: row.shift }),
+            },
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+              employee_id: true,
+              department: true,
+              designation: true,
+            },
+          });
+          allEmployees.push(updated);
+          updatedCount++;
+        } else {
+          // Create new employee
+          const employeeId = row.emp_code || await generateUniqueEmployeeId(orgId);
+          const created = await tx.user.create({
+            data: {
+              org_id: orgId,
+              email,
+              phone: row.phone,
+              password_hash: passwordHash,
+              role: 'employee',
+              first_name: row.first_name,
+              last_name: row.last_name,
+              employee_id: employeeId,
+              designation: row.designation,
+              department: row.department,
+              shift: row.shift,
+              status: 'active',
+            },
+            select: {
+              id: true,
+              email: true,
+              first_name: true,
+              last_name: true,
+              employee_id: true,
+              department: true,
+              designation: true,
+            },
+          });
+          allEmployees.push(created);
+          createdCount++;
+        }
       }
-      return createdEmployees;
+      return allEmployees;
     });
 
     sendCreated(res, {
-      imported: created.length,
-      employees: created,
-      defaultPassword,
-    }, `Successfully imported ${created.length} employees`);
+      imported: createdCount,
+      updated: updatedCount,
+      employees: results,
+      defaultPassword: createdCount > 0 ? defaultPassword : undefined,
+    }, `${createdCount} created, ${updatedCount} updated`);
   } catch (error) {
     next(error);
   }
