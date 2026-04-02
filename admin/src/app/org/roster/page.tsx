@@ -234,7 +234,7 @@ export default function RosterPage() {
             </span>
           </div>
 
-          <Select value={deptFilter} onValueChange={setDeptFilter}>
+          <Select value={deptFilter} onValueChange={(v) => setDeptFilter(v ?? 'all')}>
             <SelectTrigger className="w-40 h-9 text-sm">
               <SelectValue placeholder="All Departments" />
             </SelectTrigger>
