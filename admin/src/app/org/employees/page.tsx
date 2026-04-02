@@ -1,15 +1,22 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import DataTable from '@/components/DataTable';
 import StatusBadge from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
+import { Plus, Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -31,20 +38,29 @@ export default function EmployeesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [departments, setDepartments] = useState<string[]>([]);
 
+  // Bulk import state
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; defaultPassword: string } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get('/api/org/employees');
+      const list = res.data.data || [];
+      setEmployees(list);
+      const depts = [...new Set(list.map((e: Employee) => e.department).filter(Boolean))] as string[];
+      setDepartments(depts);
+    } catch {
+      toast.error('Failed to load employees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const res = await api.get('/api/org/employees');
-        const list = res.data.data || [];
-        setEmployees(list);
-        const depts = [...new Set(list.map((e: Employee) => e.department).filter(Boolean))] as string[];
-        setDepartments(depts);
-      } catch {
-        toast.error('Failed to load employees');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchEmployees();
   }, []);
 
@@ -53,6 +69,60 @@ export default function EmployeesPage() {
     const statusMatch = statusFilter === 'all' || emp.status === statusFilter;
     return deptMatch && statusMatch;
   });
+
+  const handleDownloadTemplate = () => {
+    const csv = 'EMP CODE,Emp First Name,Emp last Name,Official Email ID\nFLO001,John,Doe,john.doe@company.com';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'employee_import_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImportFile(file);
+      setImportError(null);
+      setImportResult(null);
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const res = await api.post('/api/org/employees/bulk-import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setImportResult(res.data.data);
+      toast.success(res.data.message || `Imported ${res.data.data.imported} employees`);
+      fetchEmployees();
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const msg = error?.response?.data?.message || 'Import failed';
+      setImportError(msg);
+      toast.error(msg);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const resetImportDialog = () => {
+    setImportFile(null);
+    setImportResult(null);
+    setImportError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const columns = [
     {
@@ -114,12 +184,21 @@ export default function EmployeesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
           <p className="text-sm text-gray-500 mt-0.5">{employees.length} total employees</p>
         </div>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
-          <Link href="/org/employees/new">
-            <Plus className="w-4 h-4 mr-1.5" />
-            Add Employee
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => { resetImportDialog(); setImportOpen(true); }}
+          >
+            <Upload className="w-4 h-4 mr-1.5" />
+            Bulk Import
+          </Button>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/org/employees/new">
+              <Plus className="w-4 h-4 mr-1.5" />
+              Add Employee
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-5">
@@ -157,6 +236,122 @@ export default function EmployeesPage() {
           }
         />
       </div>
+
+      {/* Bulk Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bulk Import Employees</DialogTitle>
+            <DialogDescription>
+              Upload a CSV file to import multiple employees at once.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Template download */}
+            <button
+              onClick={handleDownloadTemplate}
+              className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              <Download className="w-4 h-4" />
+              Download CSV template
+            </button>
+
+            {/* Expected format */}
+            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
+              <p className="font-medium text-gray-700 mb-1.5">Expected CSV columns:</p>
+              <code className="text-[11px] block bg-white rounded px-2 py-1.5 border">
+                EMP CODE, Emp First Name, Emp last Name, Official Email ID
+              </code>
+            </div>
+
+            {/* Success result */}
+            {importResult && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-green-800">
+                      {importResult.imported} employees imported
+                    </p>
+                    <p className="text-green-700 mt-1">
+                      Default password: <code className="bg-green-100 px-1.5 py-0.5 rounded font-mono text-xs">{importResult.defaultPassword}</code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {importError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{importError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* File input */}
+            {!importResult && (
+              <>
+                <div
+                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  {importFile ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium text-gray-800">{importFile.name}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">Click to select CSV file</p>
+                      <p className="text-xs text-gray-400 mt-1">Max 500 employees per import</p>
+                    </>
+                  )}
+                </div>
+
+                <Button
+                  className="w-full"
+                  disabled={!importFile || importing}
+                  onClick={handleImport}
+                >
+                  {importing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import Employees
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {/* Close after success */}
+            {importResult && (
+              <Button
+                className="w-full"
+                onClick={() => setImportOpen(false)}
+              >
+                Done
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -398,10 +398,38 @@ interface CsvRow {
   email: string;
   first_name: string;
   last_name: string;
+  emp_code?: string;
   phone?: string;
   designation?: string;
   department?: string;
   shift?: string;
+}
+
+// Normalize CSV column headers to our internal field names
+// Supports: "EMP CODE" / "emp_code", "Emp First Name" / "first_name", etc.
+function normalizeHeaders(raw: Record<string, string>): Record<string, string> {
+  const mapped: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    const k = key.trim().toLowerCase().replace(/\s+/g, '_');
+    if (k === 'official_email_id' || k === 'email_id' || k === 'email') {
+      mapped.email = value;
+    } else if (k === 'emp_first_name' || k === 'first_name') {
+      mapped.first_name = value;
+    } else if (k === 'emp_last_name' || k === 'last_name') {
+      mapped.last_name = value;
+    } else if (k === 'emp_code' || k === 'employee_code' || k === 'employee_id') {
+      mapped.emp_code = value;
+    } else if (k === 'phone' || k === 'phone_number' || k === 'mobile') {
+      mapped.phone = value;
+    } else if (k === 'designation' || k === 'title' || k === 'role_title') {
+      mapped.designation = value;
+    } else if (k === 'department' || k === 'dept') {
+      mapped.department = value;
+    } else if (k === 'shift') {
+      mapped.shift = value;
+    }
+  }
+  return mapped;
 }
 
 export async function bulkImportEmployees(
@@ -419,9 +447,9 @@ export async function bulkImportEmployees(
 
     const filePath = req.file.path;
 
-    // Parse CSV
-    const records: CsvRow[] = await new Promise((resolve, reject) => {
-      const results: CsvRow[] = [];
+    // Parse CSV with raw headers, then normalize
+    const rawRecords: Record<string, string>[] = await new Promise((resolve, reject) => {
+      const results: Record<string, string>[] = [];
       fs.createReadStream(filePath)
         .pipe(
           parse({
@@ -430,13 +458,15 @@ export async function bulkImportEmployees(
             trim: true,
           })
         )
-        .on('data', (row: CsvRow) => results.push(row))
+        .on('data', (row: Record<string, string>) => results.push(row))
         .on('end', () => resolve(results))
         .on('error', reject);
     });
 
     // Clean up uploaded file
     fs.unlink(filePath, () => {});
+
+    const records = rawRecords.map(normalizeHeaders) as unknown as CsvRow[];
 
     if (records.length === 0) {
       sendBadRequest(res, 'CSV file is empty');
@@ -452,6 +482,7 @@ export async function bulkImportEmployees(
       email: z.string().email('Invalid email'),
       first_name: z.string().min(1, 'First name required'),
       last_name: z.string().min(1, 'Last name required'),
+      emp_code: z.string().optional(),
       phone: z.string().optional(),
       designation: z.string().optional(),
       department: z.string().optional(),
@@ -507,7 +538,8 @@ export async function bulkImportEmployees(
     const created = await prisma.$transaction(async (tx) => {
       const createdEmployees = [];
       for (const row of validRows) {
-        const employeeId = await generateUniqueEmployeeId(orgId);
+        // Use EMP CODE from CSV if provided, otherwise auto-generate
+        const employeeId = row.emp_code || await generateUniqueEmployeeId(orgId);
 
         const employee = await tx.user.create({
           data: {
