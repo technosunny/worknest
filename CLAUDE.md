@@ -47,7 +47,7 @@ Three user roles drive the entire system: **super_admin**, **org_admin**, **empl
 ### Backend Structure
 - **Routes** mount under `/api` with role-based prefixes: `/api/auth`, `/api/public`, `/api/super-admin`, `/api/org`, `/api/employee`
 - **Middleware chain**: `authenticate` → `requireRole(...)` → `requireOrgScope`/`enforceOrgAccess` → controller
-- **Prisma models**: `Organisation`, `User`, `Attendance` — schema at `backend/prisma/schema.prisma`
+- **Prisma models**: `Organisation`, `User`, `Attendance`, `Roster` — schema at `backend/prisma/schema.prisma`
 - **Validation**: Zod schemas defined inline in controllers
 - **Response format**: Standardized via `response.utils.ts` (success/error/pagination helpers)
 - **File uploads**: Multer middleware for CSV bulk import and selfie photos
@@ -56,7 +56,7 @@ Three user roles drive the entire system: **super_admin**, **org_admin**, **empl
 - Next.js App Router with `src/app/` directory
 - Two context providers wrap the app: `AuthContext` (JWT + auto-refresh) and `BrandingContext` (org-specific theming via subdomain slug)
 - API client at `src/lib/api.ts` — Axios instance with automatic Bearer token injection and 401 → token refresh → retry logic
-- Route groups: `/org/*` (org admin pages), `/super-admin/*` (platform admin pages)
+- Route groups: `/org/*` (org admin pages — dashboard, employees, attendance, roster, settings), `/super-admin/*` (platform admin pages)
 - `ProtectedRoute` component enforces auth + role checks
 - UI built with shadcn/ui (Base Nova style), icons from Lucide
 
@@ -65,14 +65,17 @@ Three user roles drive the entire system: **super_admin**, **org_admin**, **empl
 - **Data layer**: `data/repositories/` wrap API calls; `data/models/` define User, Attendance, Auth models
 - **API client**: Dio with interceptors for Bearer token and automatic 401 refresh at `core/api/api_client.dart`
 - **Storage**: SharedPreferences for tokens and cached user data (not FlutterSecureStorage — removed due to grey screen crash)
-- **Key flow**: Check-in captures GPS location (geolocator) + front camera selfie (image_picker), uploads as multipart
+- **Key flow**: Check-in captures GPS location (geolocator) + front camera selfie (web: live camera via dart:js_interop, mobile: camera package), uploads as multipart bytes
 
 ### Deployment
-- Hosted on **Coolify** (self-hosted PaaS)
+- Hosted on **Coolify** (self-hosted PaaS) at `https://epikappstage.work`
 - Domain: **hr360flow.com**
 - Super admin panel: `https://admin.hr360flow.com/login`
 - Org-specific admin portals: `https://<org-slug>.hr360flow.com/login` (e.g. `flebo-in.hr360flow.com`)
 - API: `https://api.hr360flow.com`
+- Coolify app UUIDs: backend=`c13zb6ou8dq8ew4lxq1b6391`, admin=`o14c9n2jyouno781eh9jo3vl`, db=`egts4rcbgnjn2d57dpp9y0y8`
+- Deploy via API: `POST https://epikappstage.work/api/v1/deploy?uuid=<app-uuid>`
+- Backend `start` script auto-runs `prisma migrate deploy` — add migration files before deploying
 
 ### Backend Environment
 Copy `backend/.env.example` to `backend/.env`. Required vars: `DATABASE_URL`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `PORT`.
@@ -83,6 +86,9 @@ Copy `backend/.env.example` to `backend/.env`. Required vars: `DATABASE_URL`, `J
 - Admin uses React Hook Form + Zod for form validation
 - Flutter models handle both snake_case and camelCase JSON fields from the API
 - Attendance has a unique constraint on (orgId, userId, date) — one record per employee per day
+- Roster has a unique constraint on (orgId, userId, date) — one shift per employee per day, supports upsert
+- Bulk employee import uses flexible CSV header matching (fuzzy `includes()`) with BOM support; upserts existing emails instead of rejecting duplicates
+- Roster CSV format: first column is employee ID/email, remaining columns are dates (DD-MMM-YYYY), values are `dayshift`/`nightshift`/`WOF`
 - The admin reads `NEXT_PUBLIC_API_URL` env var for the backend URL (defaults to `http://localhost:3001`)
 - The Flutter app's production API base URL is hardcoded in `app/lib/core/constants/`
 - Next.js AGENTS.md warns that this version (16.x) may have breaking changes vs training data — read `node_modules/next/dist/docs/` when in doubt

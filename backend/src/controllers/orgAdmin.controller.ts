@@ -15,29 +15,51 @@ import {
   parsePagination,
 } from '../utils/response.utils';
 
+const employeeDetailFields = {
+  father_or_guardian_name: z.string().optional(),
+  gender: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  current_address: z.string().optional(),
+  permanent_address: z.string().optional(),
+  date_of_joining: z.string().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
+  emergency_contact_relation: z.string().optional(),
+  personal_email: z.string().optional(),
+  pan_number: z.string().optional(),
+  aadhaar_number: z.string().optional(),
+  highest_qualification: z.string().optional(),
+  uan_number: z.string().optional(),
+  bank_account_number: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_ifsc_code: z.string().optional(),
+};
+
 const createEmployeeSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
+  last_name: z.string().optional().default(''),
   designation: z.string().optional(),
   department: z.string().optional(),
   shift: z.string().optional(),
   reporting_manager_id: z.string().uuid('Invalid manager ID').optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  ...employeeDetailFields,
 });
 
 const updateEmployeeSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
   phone: z.string().optional(),
   first_name: z.string().min(1).optional(),
-  last_name: z.string().min(1).optional(),
+  last_name: z.string().optional(),
   designation: z.string().optional(),
   department: z.string().optional(),
   shift: z.string().optional(),
   reporting_manager_id: z.string().uuid('Invalid manager ID').nullable().optional(),
   status: z.enum(['active', 'inactive', 'exited']).optional(),
   avatar_url: z.string().url('Invalid URL').optional(),
+  ...employeeDetailFields,
 });
 
 export async function listEmployees(
@@ -173,21 +195,23 @@ export async function createEmployee(
         shift: data.shift,
         reporting_manager_id: data.reporting_manager_id,
         status: 'active',
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        role: true,
-        first_name: true,
-        last_name: true,
-        employee_id: true,
-        designation: true,
-        department: true,
-        shift: true,
-        status: true,
-        avatar_url: true,
-        created_at: true,
+        father_or_guardian_name: data.father_or_guardian_name,
+        gender: data.gender,
+        date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : undefined,
+        current_address: data.current_address,
+        permanent_address: data.permanent_address,
+        date_of_joining: data.date_of_joining ? new Date(data.date_of_joining) : undefined,
+        emergency_contact_name: data.emergency_contact_name,
+        emergency_contact_phone: data.emergency_contact_phone,
+        emergency_contact_relation: data.emergency_contact_relation,
+        personal_email: data.personal_email,
+        pan_number: data.pan_number,
+        aadhaar_number: data.aadhaar_number,
+        highest_qualification: data.highest_qualification,
+        uan_number: data.uan_number,
+        bank_account_number: data.bank_account_number,
+        bank_name: data.bank_name,
+        bank_ifsc_code: data.bank_ifsc_code,
       },
     });
 
@@ -224,6 +248,23 @@ export async function getEmployee(
         shift: true,
         status: true,
         avatar_url: true,
+        father_or_guardian_name: true,
+        gender: true,
+        date_of_birth: true,
+        current_address: true,
+        permanent_address: true,
+        date_of_joining: true,
+        emergency_contact_name: true,
+        emergency_contact_phone: true,
+        emergency_contact_relation: true,
+        personal_email: true,
+        pan_number: true,
+        aadhaar_number: true,
+        highest_qualification: true,
+        uan_number: true,
+        bank_account_number: true,
+        bank_name: true,
+        bank_ifsc_code: true,
         created_at: true,
         updated_at: true,
         reporting_manager: {
@@ -321,7 +362,7 @@ export async function updateEmployee(
         ...(data.email && { email: data.email.toLowerCase() }),
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.first_name && { first_name: data.first_name }),
-        ...(data.last_name && { last_name: data.last_name }),
+        ...(data.last_name !== undefined && { last_name: data.last_name }),
         ...(data.designation !== undefined && { designation: data.designation }),
         ...(data.department !== undefined && { department: data.department }),
         ...(data.shift !== undefined && { shift: data.shift }),
@@ -330,21 +371,23 @@ export async function updateEmployee(
         }),
         ...(data.status && { status: data.status }),
         ...(data.avatar_url !== undefined && { avatar_url: data.avatar_url }),
-      },
-      select: {
-        id: true,
-        email: true,
-        phone: true,
-        role: true,
-        first_name: true,
-        last_name: true,
-        employee_id: true,
-        designation: true,
-        department: true,
-        shift: true,
-        status: true,
-        avatar_url: true,
-        updated_at: true,
+        ...(data.father_or_guardian_name !== undefined && { father_or_guardian_name: data.father_or_guardian_name }),
+        ...(data.gender !== undefined && { gender: data.gender }),
+        ...(data.date_of_birth !== undefined && { date_of_birth: data.date_of_birth ? new Date(data.date_of_birth) : null }),
+        ...(data.current_address !== undefined && { current_address: data.current_address }),
+        ...(data.permanent_address !== undefined && { permanent_address: data.permanent_address }),
+        ...(data.date_of_joining !== undefined && { date_of_joining: data.date_of_joining ? new Date(data.date_of_joining) : null }),
+        ...(data.emergency_contact_name !== undefined && { emergency_contact_name: data.emergency_contact_name }),
+        ...(data.emergency_contact_phone !== undefined && { emergency_contact_phone: data.emergency_contact_phone }),
+        ...(data.emergency_contact_relation !== undefined && { emergency_contact_relation: data.emergency_contact_relation }),
+        ...(data.personal_email !== undefined && { personal_email: data.personal_email }),
+        ...(data.pan_number !== undefined && { pan_number: data.pan_number }),
+        ...(data.aadhaar_number !== undefined && { aadhaar_number: data.aadhaar_number }),
+        ...(data.highest_qualification !== undefined && { highest_qualification: data.highest_qualification }),
+        ...(data.uan_number !== undefined && { uan_number: data.uan_number }),
+        ...(data.bank_account_number !== undefined && { bank_account_number: data.bank_account_number }),
+        ...(data.bank_name !== undefined && { bank_name: data.bank_name }),
+        ...(data.bank_ifsc_code !== undefined && { bank_ifsc_code: data.bank_ifsc_code }),
       },
     });
 
@@ -403,6 +446,23 @@ interface CsvRow {
   designation?: string;
   department?: string;
   shift?: string;
+  father_or_guardian_name?: string;
+  gender?: string;
+  date_of_birth?: string;
+  current_address?: string;
+  permanent_address?: string;
+  date_of_joining?: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  emergency_contact_relation?: string;
+  personal_email?: string;
+  pan_number?: string;
+  aadhaar_number?: string;
+  highest_qualification?: string;
+  uan_number?: string;
+  bank_account_number?: string;
+  bank_name?: string;
+  bank_ifsc_code?: string;
 }
 
 // Normalize CSV column headers to our internal field names
@@ -411,20 +471,58 @@ function normalizeHeaders(raw: Record<string, string>): Record<string, string> {
   const mapped: Record<string, string> = {};
   for (const [key, value] of Object.entries(raw)) {
     const k = key.trim().toLowerCase().replace(/\s+/g, '_');
-    if (k.includes('email')) {
+    // Identity fields
+    if (k.includes('official') && k.includes('email') || k === 'email' || k === 'email_id') {
       mapped.email = value;
+    } else if (k.includes('personal') && k.includes('email')) {
+      mapped.personal_email = value;
     } else if (k.includes('first') && k.includes('name')) {
       mapped.first_name = value;
     } else if (k.includes('last') && k.includes('name')) {
       mapped.last_name = value;
-    } else if (k.includes('emp') && k.includes('code') || k === 'employee_id') {
+    } else if ((k.includes('emp') && k.includes('code')) || k === 'employee_id') {
       mapped.emp_code = value;
+    } else if (k.includes('father') || k.includes('guardian') || k.includes('c/o') || k.includes('co_name')) {
+      mapped.father_or_guardian_name = value;
+    } else if (k === 'gender' || k === 'sex') {
+      mapped.gender = value;
+    } else if (k === 'dob' || k.includes('date_of_birth') || k === 'birth_date') {
+      mapped.date_of_birth = value;
+    } else if (k.includes('current') && k.includes('address')) {
+      mapped.current_address = value;
+    } else if (k.includes('permanent') && k.includes('address')) {
+      mapped.permanent_address = value;
     } else if (k.includes('phone') || k.includes('mobile')) {
-      mapped.phone = value;
+      // Skip if already mapped emergency contact phone
+      if (!k.includes('emergency') && !k.includes('contact')) {
+        mapped.phone = value;
+      }
+    } else if (k === 'doj' || k.includes('date_of_joining') || k === 'joining_date') {
+      mapped.date_of_joining = value;
+    } else if (k.includes('emergency') && (k.includes('name') || k.includes('person_name'))) {
+      mapped.emergency_contact_name = value;
+    } else if (k.includes('emergency') && (k.includes('no') || k.includes('phone') || k.includes('number'))) {
+      mapped.emergency_contact_phone = value;
+    } else if (k.includes('emergency') && k.includes('relation')) {
+      mapped.emergency_contact_relation = value;
+    } else if (k === 'pan' || k.includes('pan_number') || k.includes('pan_no')) {
+      mapped.pan_number = value;
+    } else if (k.includes('adhaar') || k.includes('aadhaar') || k.includes('aadhar')) {
+      mapped.aadhaar_number = value;
+    } else if (k.includes('qualification') || k.includes('education')) {
+      mapped.highest_qualification = value;
+    } else if (k.includes('uan')) {
+      mapped.uan_number = value;
     } else if (k.includes('designation') || k === 'title' || k === 'role_title') {
       mapped.designation = value;
     } else if (k.includes('department') || k === 'dept') {
       mapped.department = value;
+    } else if (k.includes('account') && k.includes('no') || k.includes('account_number')) {
+      mapped.bank_account_number = value;
+    } else if (k.includes('bank') && k.includes('name')) {
+      mapped.bank_name = value;
+    } else if (k.includes('ifsc')) {
+      mapped.bank_ifsc_code = value;
     } else if (k === 'shift') {
       mapped.shift = value;
     }
@@ -499,6 +597,23 @@ export async function bulkImportEmployees(
       designation: z.string().optional(),
       department: z.string().optional(),
       shift: z.string().optional(),
+      father_or_guardian_name: z.string().optional(),
+      gender: z.string().optional(),
+      date_of_birth: z.string().optional(),
+      current_address: z.string().optional(),
+      permanent_address: z.string().optional(),
+      date_of_joining: z.string().optional(),
+      emergency_contact_name: z.string().optional(),
+      emergency_contact_phone: z.string().optional(),
+      emergency_contact_relation: z.string().optional(),
+      personal_email: z.string().optional(),
+      pan_number: z.string().optional(),
+      aadhaar_number: z.string().optional(),
+      highest_qualification: z.string().optional(),
+      uan_number: z.string().optional(),
+      bank_account_number: z.string().optional(),
+      bank_name: z.string().optional(),
+      bank_ifsc_code: z.string().optional(),
     });
 
     const validRows: CsvRow[] = [];
@@ -536,6 +651,50 @@ export async function bulkImportEmployees(
     });
     const existingEmailMap = new Map(existingUsers.map((u) => [u.email, u.id]));
 
+    // Parse date strings from CSV (DD/MM/YYYY, DD-MM-YYYY, DD-MMM-YYYY, etc.)
+    function parseCsvDate(val?: string): Date | undefined {
+      if (!val || !val.trim()) return undefined;
+      const s = val.trim();
+      // DD/MM/YYYY or DD-MM-YYYY
+      const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (dmy) return new Date(Date.UTC(+dmy[3], +dmy[2] - 1, +dmy[1]));
+      // DD-MMM-YYYY
+      const months: Record<string, number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+      const mdy = s.match(/^(\d{1,2})[\/\-]([A-Za-z]{3})[\/\-](\d{4})$/);
+      if (mdy && months[mdy[2].toLowerCase()] !== undefined) return new Date(Date.UTC(+mdy[3], months[mdy[2].toLowerCase()], +mdy[1]));
+      // Fallback
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? undefined : d;
+    }
+
+    // Build extra fields object from a row
+    function buildExtraFields(row: CsvRow) {
+      return {
+        ...(row.father_or_guardian_name && { father_or_guardian_name: row.father_or_guardian_name }),
+        ...(row.gender && { gender: row.gender }),
+        ...(row.date_of_birth && { date_of_birth: parseCsvDate(row.date_of_birth) }),
+        ...(row.current_address && { current_address: row.current_address }),
+        ...(row.permanent_address && { permanent_address: row.permanent_address }),
+        ...(row.date_of_joining && { date_of_joining: parseCsvDate(row.date_of_joining) }),
+        ...(row.emergency_contact_name && { emergency_contact_name: row.emergency_contact_name }),
+        ...(row.emergency_contact_phone && { emergency_contact_phone: row.emergency_contact_phone }),
+        ...(row.emergency_contact_relation && { emergency_contact_relation: row.emergency_contact_relation }),
+        ...(row.personal_email && { personal_email: row.personal_email }),
+        ...(row.pan_number && { pan_number: row.pan_number }),
+        ...(row.aadhaar_number && { aadhaar_number: row.aadhaar_number }),
+        ...(row.highest_qualification && { highest_qualification: row.highest_qualification }),
+        ...(row.uan_number && { uan_number: row.uan_number }),
+        ...(row.bank_account_number && { bank_account_number: row.bank_account_number }),
+        ...(row.bank_name && { bank_name: row.bank_name }),
+        ...(row.bank_ifsc_code && { bank_ifsc_code: row.bank_ifsc_code }),
+      };
+    }
+
+    const employeeSelect = {
+      id: true, email: true, first_name: true, last_name: true,
+      employee_id: true, department: true, designation: true,
+    };
+
     // Create new + update existing in a transaction
     const defaultPassword = `Welcome@${new Date().getFullYear()}`;
     const passwordHash = await hashPassword(defaultPassword);
@@ -548,9 +707,9 @@ export async function bulkImportEmployees(
       for (const row of validRows) {
         const email = row.email.toLowerCase();
         const existingId = existingEmailMap.get(email);
+        const extra = buildExtraFields(row);
 
         if (existingId) {
-          // Update existing employee
           const updated = await tx.user.update({
             where: { id: existingId },
             data: {
@@ -561,21 +720,13 @@ export async function bulkImportEmployees(
               ...(row.designation && { designation: row.designation }),
               ...(row.department && { department: row.department }),
               ...(row.shift && { shift: row.shift }),
+              ...extra,
             },
-            select: {
-              id: true,
-              email: true,
-              first_name: true,
-              last_name: true,
-              employee_id: true,
-              department: true,
-              designation: true,
-            },
+            select: employeeSelect,
           });
           allEmployees.push(updated);
           updatedCount++;
         } else {
-          // Create new employee
           const employeeId = row.emp_code || await generateUniqueEmployeeId(orgId);
           const created = await tx.user.create({
             data: {
@@ -591,16 +742,9 @@ export async function bulkImportEmployees(
               department: row.department,
               shift: row.shift,
               status: 'active',
+              ...extra,
             },
-            select: {
-              id: true,
-              email: true,
-              first_name: true,
-              last_name: true,
-              employee_id: true,
-              department: true,
-              designation: true,
-            },
+            select: employeeSelect,
           });
           allEmployees.push(created);
           createdCount++;

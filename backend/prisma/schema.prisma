@@ -72,15 +72,32 @@ model User {
   role                 UserRole   @default(employee)
   first_name           String
   last_name            String
-  employee_id          String?
-  designation          String?
-  department           String?
-  shift                String?
-  reporting_manager_id String?
-  status               UserStatus @default(active)
-  avatar_url           String?
-  created_at           DateTime   @default(now())
-  updated_at           DateTime   @updatedAt
+  employee_id               String?
+  designation               String?
+  department                String?
+  shift                     String?
+  reporting_manager_id      String?
+  status                    UserStatus @default(active)
+  avatar_url                String?
+  father_or_guardian_name   String?
+  gender                    String?
+  date_of_birth             DateTime?  @db.Date
+  current_address           String?
+  permanent_address         String?
+  date_of_joining           DateTime?  @db.Date
+  emergency_contact_name    String?
+  emergency_contact_phone   String?
+  emergency_contact_relation String?
+  personal_email            String?
+  pan_number                String?
+  aadhaar_number            String?
+  highest_qualification     String?
+  uan_number                String?
+  bank_account_number       String?
+  bank_name                 String?
+  bank_ifsc_code            String?
+  created_at                DateTime   @default(now())
+  updated_at                DateTime   @updatedAt
 
   organisation     Organisation? @relation(fields: [org_id], references: [id])
   reporting_manager User?        @relation("ReportingManager", fields: [reporting_manager_id], references: [id])

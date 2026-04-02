@@ -17,7 +17,7 @@ import Link from 'next/link';
 
 const schema = z.object({
   first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
+  last_name: z.string().optional(),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
   phone: z.string().optional(),
@@ -25,6 +25,23 @@ const schema = z.object({
   department: z.string().optional(),
   shift: z.string().optional(),
   employee_id: z.string().optional(),
+  father_or_guardian_name: z.string().optional(),
+  gender: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  current_address: z.string().optional(),
+  permanent_address: z.string().optional(),
+  date_of_joining: z.string().optional(),
+  emergency_contact_name: z.string().optional(),
+  emergency_contact_phone: z.string().optional(),
+  emergency_contact_relation: z.string().optional(),
+  personal_email: z.string().optional(),
+  pan_number: z.string().optional(),
+  aadhaar_number: z.string().optional(),
+  highest_qualification: z.string().optional(),
+  uan_number: z.string().optional(),
+  bank_account_number: z.string().optional(),
+  bank_name: z.string().optional(),
+  bank_ifsc_code: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -167,6 +184,103 @@ export default function NewEmployeePage() {
             <div className="space-y-1.5">
               <Label htmlFor="shift">Shift</Label>
               <Input id="shift" {...register('shift')} placeholder="Morning / Evening / Night" />
+            </div>
+
+            {/* Personal Details */}
+            <div className="border-t pt-5 mt-5">
+              <p className="text-sm font-semibold text-gray-700 mb-4">Personal Details</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="father_or_guardian_name">Father&apos;s / Guardian Name</Label>
+                    <Input id="father_or_guardian_name" {...register('father_or_guardian_name')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="gender">Gender</Label>
+                    <Input id="gender" {...register('gender')} placeholder="Male / Female" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="date_of_birth">Date of Birth</Label>
+                    <Input id="date_of_birth" type="date" {...register('date_of_birth')} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="date_of_joining">Date of Joining</Label>
+                    <Input id="date_of_joining" type="date" {...register('date_of_joining')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="highest_qualification">Highest Qualification</Label>
+                    <Input id="highest_qualification" {...register('highest_qualification')} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="current_address">Current Address</Label>
+                  <Input id="current_address" {...register('current_address')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="permanent_address">Permanent Address</Label>
+                  <Input id="permanent_address" {...register('permanent_address')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="personal_email">Personal Email</Label>
+                  <Input id="personal_email" type="email" {...register('personal_email')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency Contact */}
+            <div className="border-t pt-5 mt-5">
+              <p className="text-sm font-semibold text-gray-700 mb-4">Emergency Contact</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="emergency_contact_name">Name</Label>
+                  <Input id="emergency_contact_name" {...register('emergency_contact_name')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="emergency_contact_phone">Phone</Label>
+                  <Input id="emergency_contact_phone" {...register('emergency_contact_phone')} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="emergency_contact_relation">Relation</Label>
+                  <Input id="emergency_contact_relation" {...register('emergency_contact_relation')} />
+                </div>
+              </div>
+            </div>
+
+            {/* Documents & Banking */}
+            <div className="border-t pt-5 mt-5">
+              <p className="text-sm font-semibold text-gray-700 mb-4">Documents & Banking</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pan_number">PAN Number</Label>
+                    <Input id="pan_number" {...register('pan_number')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="aadhaar_number">Aadhaar Number</Label>
+                    <Input id="aadhaar_number" {...register('aadhaar_number')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="uan_number">UAN Number</Label>
+                    <Input id="uan_number" {...register('uan_number')} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bank_account_number">Bank Account No.</Label>
+                    <Input id="bank_account_number" {...register('bank_account_number')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bank_name">Bank Name</Label>
+                    <Input id="bank_name" {...register('bank_name')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bank_ifsc_code">IFSC Code</Label>
+                    <Input id="bank_ifsc_code" {...register('bank_ifsc_code')} />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 pt-2">
