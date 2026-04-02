@@ -100,13 +100,20 @@ function StatusChip({ status, label }: { status: string; label?: string }) {
   );
 }
 
+function selfieUrl(url: string): string {
+  if (url.startsWith('http')) return url;
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  return `${base}/${url}`;
+}
+
 function SelfieThumb({ url }: { url: string | null }) {
   const [open, setOpen] = useState(false);
   if (!url) return <span className="text-gray-400 text-xs">—</span>;
+  const fullUrl = selfieUrl(url);
   return (
     <>
       <Image
-        src={url}
+        src={fullUrl}
         alt="Check-in selfie"
         width={32}
         height={32}
@@ -118,7 +125,7 @@ function SelfieThumb({ url }: { url: string | null }) {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={() => setOpen(false)}
         >
-          <Image src={url} alt="Selfie" width={400} height={400} className="max-w-sm max-h-screen rounded-xl object-contain" />
+          <Image src={fullUrl} alt="Selfie" width={400} height={400} className="max-w-sm max-h-screen rounded-xl object-contain" />
         </div>
       )}
     </>
