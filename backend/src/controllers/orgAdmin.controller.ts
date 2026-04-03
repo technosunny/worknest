@@ -1106,6 +1106,29 @@ const updateOrgSettingsSchema = z.object({
   brand_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable(),
   office_lat: z.number().min(-90).max(90).optional().nullable(),
   office_lng: z.number().min(-180).max(180).optional().nullable(),
+}).superRefine((data, ctx) => {
+  const hasOfficeLat = data.office_lat !== undefined;
+  const hasOfficeLng = data.office_lng !== undefined;
+
+  if (hasOfficeLat !== hasOfficeLng) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'office_lat and office_lng must be provided together',
+      path: hasOfficeLat ? ['office_lng'] : ['office_lat'],
+    });
+    return;
+  }
+
+  const clearsOfficeLat = data.office_lat === null;
+  const clearsOfficeLng = data.office_lng === null;
+
+  if (clearsOfficeLat !== clearsOfficeLng) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'office_lat and office_lng must both be null when clearing the office location',
+      path: clearsOfficeLat ? ['office_lng'] : ['office_lat'],
+    });
+  }
 });
 
 export async function getOrgSettings(
