@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, Building2 } from 'lucide-react';
+import { Loader2, Save, Building2, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBranding } from '@/contexts/BrandingContext';
 import api from '@/lib/api';
@@ -19,6 +19,8 @@ interface OrgSettings {
   brand_colour: string | null;
   timezone: string;
   plan: string;
+  office_lat: number | null;
+  office_lng: number | null;
 }
 
 export default function OrgSettingsPage() {
@@ -26,7 +28,10 @@ export default function OrgSettingsPage() {
   const [settings, setSettings] = useState<OrgSettings | null>(null);
   const [logoUrl, setLogoUrl] = useState('');
   const [brandColour, setBrandColour] = useState('#2563eb');
+  const [officeLat, setOfficeLat] = useState('');
+  const [officeLng, setOfficeLng] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const colourInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +43,8 @@ export default function OrgSettingsPage() {
         setSettings(data);
         setLogoUrl(data.logo_url || '');
         setBrandColour(data.brand_colour || '#2563eb');
+        setOfficeLat(data.office_lat?.toString() || '');
+        setOfficeLng(data.office_lng?.toString() || '');
       } catch {
         toast.error('Failed to load organisation settings');
       } finally {
@@ -70,7 +77,6 @@ export default function OrgSettingsPage() {
       setLogoUrl(updated.logo_url || '');
       setBrandColour(updated.brand_colour || '#2563eb');
 
-      // Apply new brand colour immediately
       if (updated.brand_colour) {
         document.documentElement.style.setProperty('--brand-primary', updated.brand_colour);
         document.documentElement.style.setProperty('--brand-accent', updated.brand_colour);
@@ -82,6 +88,53 @@ export default function OrgSettingsPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleSaveLocation = async () => {
+    setIsSavingLocation(true);
+    try {
+      const lat = officeLat.trim() ? parseFloat(officeLat) : null;
+      const lng = officeLng.trim() ? parseFloat(officeLng) : null;
+
+      if (lat !== null && (isNaN(lat) || lat < -90 || lat > 90)) {
+        toast.error('Latitude must be between -90 and 90');
+        return;
+      }
+      if (lng !== null && (isNaN(lng) || lng < -180 || lng > 180)) {
+        toast.error('Longitude must be between -180 and 180');
+        return;
+      }
+
+      const res = await api.patch<{ data: OrgSettings }>('/api/org/settings', {
+        office_lat: lat,
+        office_lng: lng,
+      });
+      const updated = res.data.data;
+      setSettings(updated);
+      setOfficeLat(updated.office_lat?.toString() || '');
+      setOfficeLng(updated.office_lng?.toString() || '');
+      toast.success('Office location saved');
+    } catch {
+      toast.error('Failed to save location');
+    } finally {
+      setIsSavingLocation(false);
+    }
+  };
+
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation not supported by your browser');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOfficeLat(pos.coords.latitude.toFixed(6));
+        setOfficeLng(pos.coords.longitude.toFixed(6));
+        toast.success('Location detected');
+      },
+      () => toast.error('Failed to get location'),
+      { enableHighAccuracy: true }
+    );
   };
 
   if (isLoading) {
@@ -98,7 +151,7 @@ export default function OrgSettingsPage() {
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Organisation Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your organisation&apos;s branding and appearance</p>
+        <p className="text-sm text-gray-500 mt-1">Manage your organisation&apos;s branding, location, and appearance</p>
       </div>
 
       {/* Org Info */}
@@ -122,6 +175,68 @@ export default function OrgSettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Office Location */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Office Location
+          </CardTitle>
+          <CardDescription>Set your office coordinates to track check-in distance</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="office_lat">Latitude</Label>
+              <Input
+                id="office_lat"
+                type="text"
+                placeholder="e.g. 28.6139"
+                value={officeLat}
+                onChange={(e) => setOfficeLat(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="office_lng">Longitude</Label>
+              <Input
+                id="office_lng"
+                type="text"
+                placeholder="e.g. 77.2090"
+                value={officeLng}
+                onChange={(e) => setOfficeLng(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {officeLat && officeLng && (
+            <div className="text-xs text-gray-500">
+              <a
+                href={`https://www.google.com/maps?q=${officeLat},${officeLng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                View on Google Maps
+              </a>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={handleDetectLocation}>
+              <MapPin className="w-3.5 h-3.5 mr-1.5" />
+              Use Current Location
+            </Button>
+            <Button size="sm" onClick={handleSaveLocation} disabled={isSavingLocation}>
+              {isSavingLocation ? (
+                <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="w-3.5 h-3.5 mr-1.5" /> Save Location</>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Branding */}
       <Card>
         <CardHeader>
@@ -129,7 +244,6 @@ export default function OrgSettingsPage() {
           <CardDescription>Customise how your organisation appears in the admin portal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Logo URL */}
           <div className="space-y-2">
             <Label htmlFor="logo_url">Logo URL</Label>
             <Input
@@ -142,7 +256,6 @@ export default function OrgSettingsPage() {
             <p className="text-xs text-gray-400">Enter a publicly accessible URL for your logo image</p>
           </div>
 
-          {/* Brand Colour */}
           <div className="space-y-2">
             <Label htmlFor="brand_colour">Brand Colour</Label>
             <div className="flex items-center gap-3">
@@ -173,7 +286,6 @@ export default function OrgSettingsPage() {
             </div>
           </div>
 
-          {/* Preview */}
           <div className="rounded-xl border border-gray-200 p-4 bg-gray-50">
             <p className="text-xs text-gray-500 mb-3 font-medium uppercase tracking-wide">Preview</p>
             <div className="flex items-center gap-3">
@@ -212,15 +324,9 @@ export default function OrgSettingsPage() {
 
           <Button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto">
             {isSaving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
             ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Branding
-              </>
+              <><Save className="mr-2 h-4 w-4" /> Save Branding</>
             )}
           </Button>
         </CardContent>

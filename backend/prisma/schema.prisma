@@ -53,6 +53,8 @@ model Organisation {
   plan            Plan        @default(starter)
   status          OrgStatus   @default(trial)
   subscription_id String?
+  office_lat      Float?
+  office_lng      Float?
   created_at      DateTime    @default(now())
   updated_at      DateTime    @updatedAt
 

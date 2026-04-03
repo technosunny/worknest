@@ -1065,6 +1065,8 @@ export async function todayAttendance(
           check_in_time: true,
           check_out_time: true,
           check_in_selfie_url: true,
+          check_in_lat: true,
+          check_in_lng: true,
           total_hours: true,
           status: true,
         },
@@ -1102,6 +1104,8 @@ export async function todayAttendance(
 const updateOrgSettingsSchema = z.object({
   logo_url: z.string().url('Invalid URL').optional().nullable(),
   brand_colour: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color').optional().nullable(),
+  office_lat: z.number().min(-90).max(90).optional().nullable(),
+  office_lng: z.number().min(-180).max(180).optional().nullable(),
 });
 
 export async function getOrgSettings(
@@ -1122,6 +1126,8 @@ export async function getOrgSettings(
         brand_colour: true,
         timezone: true,
         plan: true,
+        office_lat: true,
+        office_lng: true,
       },
     });
 
@@ -1150,13 +1156,15 @@ export async function updateOrgSettings(
       return;
     }
 
-    const { logo_url, brand_colour } = parsed.data;
+    const { logo_url, brand_colour, office_lat, office_lng } = parsed.data;
 
     const updated = await prisma.organisation.update({
       where: { id: orgId },
       data: {
         ...(logo_url !== undefined && { logo_url }),
         ...(brand_colour !== undefined && { brand_colour }),
+        ...(office_lat !== undefined && { office_lat }),
+        ...(office_lng !== undefined && { office_lng }),
       },
       select: {
         id: true,
@@ -1166,6 +1174,8 @@ export async function updateOrgSettings(
         brand_colour: true,
         timezone: true,
         plan: true,
+        office_lat: true,
+        office_lng: true,
       },
     });
 

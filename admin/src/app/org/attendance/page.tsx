@@ -27,6 +27,8 @@ interface AttendanceRecord {
   check_in_time: string | null;
   check_out_time: string | null;
   check_in_selfie_url: string | null;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
   total_hours: number | null;
   status: string;
   user: User;
@@ -39,6 +41,8 @@ interface TodayRecord {
     check_in_time: string | null;
     check_out_time: string | null;
     check_in_selfie_url: string | null;
+    check_in_lat: number | null;
+    check_in_lng: number | null;
     total_hours: number | null;
     status: string;
   } | null;
@@ -68,6 +72,30 @@ function fmtTime(iso: string | null): string {
 function fmtHours(h: number | null): string {
   if (!h) return '—';
   return `${h.toFixed(1)}h`;
+}
+
+// Haversine formula: returns distance in km between two lat/lng points
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function DistanceBadge({ lat, lng, officeLat, officeLng }: {
+  lat: number | null; lng: number | null; officeLat: number | null; officeLng: number | null;
+}) {
+  if (!lat || !lng || !officeLat || !officeLng) return <span className="text-gray-400 text-xs">—</span>;
+  const km = haversineKm(officeLat, officeLng, lat, lng);
+  const color = km <= 0.5 ? 'text-green-700 bg-green-50' : km <= 2 ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50';
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${color}`}>
+      {km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`}
+    </span>
+  );
 }
 
 const attendanceStatusStyle: Record<string, string> = {
@@ -154,16 +182,24 @@ function TodayTab() {
   const [loading, setLoading] = useState(true);
   const [deptFilter, setDeptFilter] = useState('all');
   const [departments, setDepartments] = useState<string[]>([]);
+  const [officeLat, setOfficeLat] = useState<number | null>(null);
+  const [officeLng, setOfficeLng] = useState<number | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await api.get('/api/org/attendance/today');
-        const data = res.data.data;
+        const [attRes, settRes] = await Promise.all([
+          api.get('/api/org/attendance/today'),
+          api.get('/api/org/settings'),
+        ]);
+        const data = attRes.data.data;
         setRecords(data.records || []);
         setSummary(data.summary);
         const depts = [...new Set((data.records as TodayRecord[]).map((r) => r.user.department).filter(Boolean))] as string[];
         setDepartments(depts);
+        const settings = settRes.data.data;
+        setOfficeLat(settings.office_lat ?? null);
+        setOfficeLng(settings.office_lng ?? null);
       } catch {
         toast.error('Failed to load today\'s attendance');
       } finally {
@@ -216,6 +252,18 @@ function TodayTab() {
       key: 'selfie',
       label: 'Selfie',
       render: (_: unknown, row: TodayRecord) => <SelfieThumb url={row.attendance?.check_in_selfie_url ?? null} />,
+    },
+    {
+      key: 'distance',
+      label: 'Distance',
+      render: (_: unknown, row: TodayRecord) => (
+        <DistanceBadge
+          lat={row.attendance?.check_in_lat ?? null}
+          lng={row.attendance?.check_in_lng ?? null}
+          officeLat={officeLat}
+          officeLng={officeLng}
+        />
+      ),
     },
     {
       key: 'attendance_status',
@@ -278,6 +326,15 @@ function HistoryTab() {
   const [deptFilter, setDeptFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [departments, setDepartments] = useState<string[]>([]);
+  const [officeLat, setOfficeLat] = useState<number | null>(null);
+  const [officeLng, setOfficeLng] = useState<number | null>(null);
+
+  useEffect(() => {
+    api.get('/api/org/settings').then((res) => {
+      setOfficeLat(res.data.data.office_lat ?? null);
+      setOfficeLng(res.data.data.office_lng ?? null);
+    }).catch(() => {});
+  }, []);
 
   const fetchRecords = useCallback(async (d: string) => {
     setLoading(true);
@@ -335,6 +392,18 @@ function HistoryTab() {
       key: 'check_in_selfie_url',
       label: 'Selfie',
       render: (v: unknown) => <SelfieThumb url={v as string | null} />,
+    },
+    {
+      key: 'distance',
+      label: 'Distance',
+      render: (_: unknown, row: AttendanceRecord) => (
+        <DistanceBadge
+          lat={row.check_in_lat}
+          lng={row.check_in_lng}
+          officeLat={officeLat}
+          officeLng={officeLng}
+        />
+      ),
     },
     {
       key: 'status',
