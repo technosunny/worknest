@@ -21,6 +21,23 @@ const checkOutSchema = z.object({
   lng: z.number().min(-180).max(180, 'Invalid longitude'),
 });
 
+const GEOFENCE_RADIUS_METERS = 200;
+
+/** Haversine distance between two coordinates in meters */
+function haversineDistance(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6_371_000; // Earth radius in meters
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getTodayDate(): Date {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -193,6 +210,19 @@ export async function checkIn(
       return;
     }
 
+    // Geofence check — must be within 200m of office location
+    const org = await prisma.organisation.findUnique({
+      where: { id: orgId },
+      select: { office_lat: true, office_lng: true },
+    });
+    if (org?.office_lat != null && org?.office_lng != null) {
+      const distance = haversineDistance(lat, lng, org.office_lat, org.office_lng);
+      if (distance > GEOFENCE_RADIUS_METERS) {
+        sendBadRequest(res, `You are ${Math.round(distance)}m away from the office. Check-in is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
+        return;
+      }
+    }
+
     const today = getTodayDate();
 
     // Check if already checked in today
@@ -276,6 +306,19 @@ export async function checkOut(
     const orgId = req.user!.orgId!;
 
     const { lat, lng } = checkOutSchema.parse(req.body);
+
+    // Geofence check — must be within 200m of office location
+    const org = await prisma.organisation.findUnique({
+      where: { id: orgId },
+      select: { office_lat: true, office_lng: true },
+    });
+    if (org?.office_lat != null && org?.office_lng != null) {
+      const distance = haversineDistance(lat, lng, org.office_lat, org.office_lng);
+      if (distance > GEOFENCE_RADIUS_METERS) {
+        sendBadRequest(res, `You are ${Math.round(distance)}m away from the office. Check-out is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
+        return;
+      }
+    }
 
     const today = getTodayDate();
 
