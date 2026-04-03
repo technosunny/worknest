@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import path from 'path';
 import prisma from '../lib/prisma';
+import { isR2Configured, uploadToR2 } from '../utils/r2.utils';
 import {
   sendSuccess,
   sendBadRequest,
@@ -210,10 +211,16 @@ export async function checkIn(
       }
     }
 
-    // Handle selfie upload
+    // Handle selfie upload — upload to R2 if configured, else store local path
     let selfieUrl: string | undefined;
     if (req.file) {
-      selfieUrl = req.file.path.replace(/\\/g, '/');
+      if (isR2Configured() && req.file.buffer) {
+        const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+        const key = `selfies/${orgId}/${userId}-${Date.now()}${ext}`;
+        selfieUrl = await uploadToR2(req.file.buffer, key, req.file.mimetype);
+      } else if (req.file.path) {
+        selfieUrl = req.file.path.replace(/\\/g, '/');
+      }
     }
 
     const now = new Date();

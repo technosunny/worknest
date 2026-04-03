@@ -20,17 +20,8 @@ if (!fs.existsSync(avatarDir)) {
   fs.mkdirSync(avatarDir, { recursive: true });
 }
 
-// Storage configuration for selfies (check-in photos)
-const selfieStorage = multer.diskStorage({
-  destination: (_req: Request, _file: Express.Multer.File, cb) => {
-    cb(null, selfieDir);
-  },
-  filename: (_req: Request, file: Express.Multer.File, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `selfie-${uniqueSuffix}${ext}`);
-  },
-});
+// Storage configuration for selfies — memory buffer for R2 upload, disk fallback
+const selfieStorage = multer.memoryStorage();
 
 // Storage configuration for avatars
 const avatarStorage = multer.diskStorage({
