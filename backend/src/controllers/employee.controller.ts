@@ -218,7 +218,8 @@ export async function checkIn(
     if (org?.office_lat != null && org?.office_lng != null) {
       const distance = haversineDistance(lat, lng, org.office_lat, org.office_lng);
       if (distance > GEOFENCE_RADIUS_METERS) {
-        sendBadRequest(res, `You are ${Math.round(distance)}m away from the office. Check-in is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
+        const distStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${Math.round(distance)}m`;
+        sendBadRequest(res, `You are ${distStr} away from the office. Check-in is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
         return;
       }
     }
@@ -315,7 +316,8 @@ export async function checkOut(
     if (org?.office_lat != null && org?.office_lng != null) {
       const distance = haversineDistance(lat, lng, org.office_lat, org.office_lng);
       if (distance > GEOFENCE_RADIUS_METERS) {
-        sendBadRequest(res, `You are ${Math.round(distance)}m away from the office. Check-out is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
+        const distStr = distance >= 1000 ? `${(distance / 1000).toFixed(1)}km` : `${Math.round(distance)}m`;
+        sendBadRequest(res, `You are ${distStr} away from the office. Check-out is only allowed within ${GEOFENCE_RADIUS_METERS}m.`);
         return;
       }
     }
