@@ -5,6 +5,7 @@ import {
   getEmployee,
   updateEmployee,
   deactivateEmployee,
+  resetEmployeePassword,
   bulkImportEmployees,
   getOrgDashboard,
   getOrgSettings,
@@ -35,6 +36,7 @@ router.post('/employees', createEmployee);
 router.post('/employees/bulk-import', uploadCsv, bulkImportEmployees);
 router.get('/employees/:id', getEmployee);
 router.patch('/employees/:id', updateEmployee);
+router.post('/employees/:id/reset-password', resetEmployeePassword);
 router.delete('/employees/:id', deactivateEmployee);
 router.post('/roster/upload', uploadCsv, uploadRoster);
 router.get('/roster', getRoster);

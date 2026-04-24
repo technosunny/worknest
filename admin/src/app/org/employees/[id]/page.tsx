@@ -19,7 +19,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import StatusBadge from '@/components/StatusBadge';
-import { ArrowLeft, Edit2, Save, Loader2, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, Loader2, Trash2, X, Key, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -144,6 +144,11 @@ export default function EmployeeDetailPage() {
   const [saving, setSaving] = useState(false);
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
+  const [showResetPwd, setShowResetPwd] = useState(false);
+  const [resettingPwd, setResettingPwd] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const {
     register,
@@ -186,6 +191,44 @@ export default function EmployeeDetailPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+    setNewPassword(pwd);
+  };
+
+  const handleResetPassword = async () => {
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    setResettingPwd(true);
+    try {
+      await api.post(`/api/org/employees/${id}/reset-password`, { new_password: newPassword });
+      setGeneratedPassword(newPassword);
+      toast.success('Password reset successfully');
+    } catch {
+      toast.error('Failed to reset password');
+    } finally {
+      setResettingPwd(false);
+    }
+  };
+
+  const closeResetDialog = () => {
+    setShowResetPwd(false);
+    setNewPassword('');
+    setGeneratedPassword(null);
+    setCopied(false);
+  };
+
+  const copyPassword = async () => {
+    if (!generatedPassword) return;
+    await navigator.clipboard.writeText(generatedPassword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDeactivate = async () => {
@@ -349,6 +392,21 @@ export default function EmployeeDetailPage() {
         )}
       </form>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Account Actions</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Reset Password</p>
+            <p className="text-xs text-gray-500 mt-0.5">Set a new password for this employee.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowResetPwd(true)}>
+            <Key className="w-4 h-4 mr-1.5" /> Reset Password
+          </Button>
+        </CardContent>
+      </Card>
+
       {employee.status !== 'inactive' && (
         <Card className="border-red-200">
           <CardHeader className="pb-3">
@@ -369,6 +427,58 @@ export default function EmployeeDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={showResetPwd} onOpenChange={(open) => { if (!open) closeResetDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for{' '}
+              <span className="font-medium text-gray-900">{employee.first_name} {employee.last_name}</span>.
+            </DialogDescription>
+          </DialogHeader>
+          {!generatedPassword ? (
+            <div className="space-y-3 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="new_password">New Password</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="new_password"
+                    type="text"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                  />
+                  <Button type="button" variant="outline" onClick={generateRandomPassword}>Generate</Button>
+                </div>
+                <p className="text-xs text-gray-500">Share this password securely with the employee.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 py-2">
+              <p className="text-sm text-green-700">Password reset successfully. Share it with the employee:</p>
+              <div className="flex gap-2 items-center bg-gray-50 p-3 rounded border">
+                <code className="flex-1 font-mono text-sm">{generatedPassword}</code>
+                <Button type="button" variant="ghost" size="sm" onClick={copyPassword}>
+                  {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            {!generatedPassword ? (
+              <>
+                <Button variant="outline" onClick={closeResetDialog} disabled={resettingPwd}>Cancel</Button>
+                <Button onClick={handleResetPassword} disabled={resettingPwd || newPassword.length < 8}>
+                  {resettingPwd ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Resetting...</> : 'Reset Password'}
+                </Button>
+              </>
+            ) : (
+              <Button onClick={closeResetDialog}>Done</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showDeactivate} onOpenChange={setShowDeactivate}>
         <DialogContent>

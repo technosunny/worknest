@@ -437,6 +437,46 @@ export async function deactivateEmployee(
   }
 }
 
+const resetPasswordSchema = z.object({
+  new_password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+export async function resetEmployeePassword(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const orgId = req.user!.orgId!;
+    const { id } = req.params;
+
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendBadRequest(res, parsed.error.issues[0]?.message || 'Invalid password');
+      return;
+    }
+
+    const employee = await prisma.user.findFirst({
+      where: { id, org_id: orgId, role: 'employee' },
+    });
+
+    if (!employee) {
+      sendNotFound(res, 'Employee not found');
+      return;
+    }
+
+    const passwordHash = await hashPassword(parsed.data.new_password);
+    await prisma.user.update({
+      where: { id },
+      data: { password_hash: passwordHash },
+    });
+
+    sendSuccess(res, { email: employee.email }, 'Password reset successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
 interface CsvRow {
   email: string;
   first_name: string;
