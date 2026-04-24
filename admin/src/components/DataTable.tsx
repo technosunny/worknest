@@ -46,22 +46,45 @@ export default function DataTable<T extends Record<string, unknown>>({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
+  const getValue = (row: T, key: string): unknown => {
+    return key.split('.').reduce((obj: unknown, k) => {
+      if (obj && typeof obj === 'object') return (obj as Record<string, unknown>)[k];
+      return undefined;
+    }, row);
+  };
+
+  // Flatten any value (including nested objects) into a searchable string
+  const stringify = (val: unknown): string => {
+    if (val == null) return '';
+    if (typeof val === 'object') {
+      return Object.values(val as Record<string, unknown>).map(stringify).join(' ');
+    }
+    return String(val);
+  };
+
   const filtered = useMemo(() => {
     let result = [...data];
-    if (search && searchKey) {
-      result = result.filter((row) =>
-        String(row[searchKey] ?? '').toLowerCase().includes(search.toLowerCase())
-      );
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((row) => {
+        if (searchKey) {
+          return stringify(getValue(row, String(searchKey))).toLowerCase().includes(q);
+        }
+        // No searchKey — search across all column values (flattens nested objects)
+        return columns.some((col) =>
+          stringify(getValue(row, String(col.key))).toLowerCase().includes(q)
+        );
+      });
     }
     if (sortKey) {
       result.sort((a, b) => {
-        const aVal = String(a[sortKey] ?? '');
-        const bVal = String(b[sortKey] ?? '');
+        const aVal = String(getValue(a, sortKey) ?? '');
+        const bVal = String(getValue(b, sortKey) ?? '');
         return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
       });
     }
     return result;
-  }, [data, search, searchKey, sortKey, sortDir]);
+  }, [data, search, searchKey, sortKey, sortDir, columns]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -73,13 +96,6 @@ export default function DataTable<T extends Record<string, unknown>>({
       setSortKey(key);
       setSortDir('asc');
     }
-  };
-
-  const getValue = (row: T, key: string): unknown => {
-    return key.split('.').reduce((obj: unknown, k) => {
-      if (obj && typeof obj === 'object') return (obj as Record<string, unknown>)[k];
-      return undefined;
-    }, row);
   };
 
   if (loading) {
